@@ -47,7 +47,7 @@ interface PendingCode {
 /**
  * Class for communication with RRF
  */
-export default class PollConnector extends BaseConnector {
+export class PollConnector extends BaseConnector {
 	/**
 	 * Try to establish a connection to the given machine
 	 * @param hostname Hostname to connect to
@@ -1186,3 +1186,4 @@ export default class PollConnector extends BaseConnector {
 		await this.upload(this.settings.pluginsFile, JSON.stringify(this.partialModel.plugins));
 	}
 }
+export default PollConnector

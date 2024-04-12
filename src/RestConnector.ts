@@ -15,7 +15,7 @@ import { strToTime } from "./utils";
 /**
  * Class for communication with DSF
  */
-export default class RestConnector extends BaseConnector {
+export class RestConnector extends BaseConnector {
 	/**
 	 * Try to establish a connection to the given machine
 	 * @param hostname Hostname to connect to
@@ -581,3 +581,4 @@ export default class RestConnector extends BaseConnector {
 		await this.request("DELETE", "machine/systemPackage", null, "", pkg);
 	}
 }
+export default RestConnector
