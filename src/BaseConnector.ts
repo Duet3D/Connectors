@@ -148,10 +148,10 @@ export abstract class BaseConnector {
 	}
 
 	/**
-	 * Load enumeration of installed DWC plugins.
+	 * Load enumeration of installed plugins.
 	 * This does not require an implementation in SBC mode
 	 */
-	loadDwcPluginList(): Promise<void> { return Promise.resolve(); }
+	loadPluginList(): Promise<void> { return Promise.resolve(); }
 
 	/**
 	 * Reconnect after a connection error

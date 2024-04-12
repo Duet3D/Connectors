@@ -13,7 +13,7 @@ import {
 import { strToTime } from "./utils";
 
 /**
- * Class for communication between DWC and DSF
+ * Class for communication with DSF
  */
 export default class RestConnector extends BaseConnector {
 	/**

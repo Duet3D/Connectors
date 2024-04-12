@@ -45,7 +45,7 @@ interface PendingCode {
 }
 
 /**
- * Class for communication between DWC and RRF
+ * Class for communication with RRF
  */
 export default class PollConnector extends BaseConnector {
 	/**
