@@ -1,0 +1,33 @@
+{
+  "name": "@duet3d/connectors",
+  "version": "3.6.0-beta.1",
+  "description": "TypeScript implementation of the Duet3D HTTP connectors",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Duet3D/Connectors.git"
+  },
+  "author": "Christian Hammacher",
+  "license": "LGPL-2.1",
+  "bugs": {
+    "url": "https://github.com/Duet3D/Connectors/issues"
+  },
+  "homepage": "https://github.com/Duet3D/Connectors#readme",
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "typescript": "^5.4.5"
+  },
+  "files": [
+    "/dist"
+  ],
+  "dependencies": {
+    "@duet3d/objectmodel": "^3.5.0-rc.18",
+    "jszip": "^3.10.1",
+    "turbo-crc32": "^1.0.1"
+  }
+}
