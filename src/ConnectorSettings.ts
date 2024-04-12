@@ -123,7 +123,7 @@ export const DefaultConnectorSettings = {
      */
     crcUploads: true,
 
-    /*
+    /**
      * Maximum threshold of HTTP request data lengths for automatic retries on error (in bytes)
      */
     fileTransferRetryThreshold: 358400,			// 350 KiB
