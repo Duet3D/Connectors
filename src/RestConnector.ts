@@ -97,7 +97,7 @@ export class RestConnector extends BaseConnector {
 	 */
 	constructor(hostname: string, settings: ConnectorSettings, callbacks: ConnectorCallbacks, socket: WebSocket, model: ObjectModel, sessionKey: string) {
 		super(hostname, settings, callbacks);
-		this.requestBase = `${settings.protocol}//${hostname}${settings.baseURL}/`;
+		this.requestBase = `${settings.protocol}//${hostname}${settings.baseURL}`;
 		this.socket = socket;
 		this.initialModel = model;
 		this.sessionKey = sessionKey;
