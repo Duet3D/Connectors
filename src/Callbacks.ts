@@ -3,21 +3,13 @@ import BaseConnector from "./BaseConnector";
 /**
  * Class holding possible callbacks for the connector
  */
-export interface ConnectorCallbacks {
+export interface Callbacks {
     /**
-     * Called to report the progress while establishing a connection
+     * Called to report the progress while establishing a connection (again)
      * @param connector Connector instance
      * @param progress Connection progress in percent (0..100) or -1 when the connect process has finished
-     * @returns 
      */
     onConnectProgress: (connector: BaseConnector, progress: number) => void;
-
-    /**
-     * Called to let the callee load settings from the machine being connected.
-     * This is called before connector.connect() returns the final connector instrance and before the connector starts its update loop
-     * @param connector Connector instance
-     */
-    onLoadSettings: (connector: BaseConnector) => Promise<void> | void;
 
     /**
      * Connection has been lost
@@ -47,4 +39,4 @@ export interface ConnectorCallbacks {
      */
     onVolumeChanged: (connector: BaseConnector, volumeIndex: number) => void;
 }
-export default ConnectorCallbacks
+export default Callbacks

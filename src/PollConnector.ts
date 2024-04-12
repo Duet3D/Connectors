@@ -3,8 +3,8 @@ import JSZip from "jszip";
 import crc32 from "turbo-crc32/crc32";
 
 import BaseConnector, { CancellationToken, FileListItem, OnProgressCallback } from "./BaseConnector";
-import ConnectorSettings from "./ConnectorSettings";
-import ConnectorCallbacks from "./ConnectorCallbacks";
+import Settings from "./Settings";
+import Callbacks from "./Callbacks";
 
 import {
 	NetworkError, DisconnectedError, TimeoutError, OperationCancelledError, OperationFailedError,
@@ -52,13 +52,12 @@ export class PollConnector extends BaseConnector {
 	 * Try to establish a connection to the given machine
 	 * @param hostname Hostname to connect to
 	 * @param settings Connector settings
-	 * @param callbacks Callbacks invoked by the connector
 	 * @throws {NetworkError} Failed to establish a connection
 	 * @throws {InvalidPasswordError} Invalid password
 	 * @throws {NoFreeSessionError} No more free sessions available
 	 * @throws {BadVersionError} Incompatible firmware version (no object model?)
 	 */
-	static override async connect(hostname: string, settings: ConnectorSettings, callbacks: ConnectorCallbacks): Promise<BaseConnector> {
+	static override async connect(hostname: string, settings: Settings): Promise<BaseConnector> {
 		const response = await BaseConnector.request("GET", `${location.protocol}//${hostname}${settings.baseURL}rr_connect`, {
 			password: settings.password,
 			time: timeToStr(new Date()),
@@ -74,27 +73,13 @@ export class PollConnector extends BaseConnector {
 					// rr_status requests are no longer supported
 					throw new BadVersionError();
 				}
-
-				const connector = new PollConnector(hostname, settings, callbacks, response);
-				callbacks.onConnectProgress(connector, 0); // Don't hide the connection dialog while the full model is being loaded...
-
-				// Let the callee load settings from the machine being connected
-				await callbacks.onLoadSettings(connector);
-
-				// Ideally we should be using a ServiceWorker here which would allow us to send push
-				// notifications even while the UI is running in the background. However, we cannot do
-				// this because ServiceWorkers require secured HTTP connections, which are no option
-				// for standard end-users. That is also the reason why they are disabled in the build
-				// script, which by default is used for improved caching
-				connector.doUpdate();
-
-				return connector;
+				return new PollConnector(hostname, settings, response);
 			case 1: throw new InvalidPasswordError();
 			case 2: throw new NoFreeSessionError();
 			default: throw new LoginError(`Unknown err value: ${response.err}`)
 		}
 	}
-
+	
 	/**
 	 * Maximum time between HTTP requests before the session times out (in ms)
 	 */
@@ -294,12 +279,28 @@ export class PollConnector extends BaseConnector {
 	 * @param callbacks Callbacks invoked by the connector
 	 * @param responseData Response to the rr_connect request
 	 */
-	constructor(hostname: string, settings: ConnectorSettings, callbacks: ConnectorCallbacks, responseData: ConnectResponse) {
-		super(hostname, settings, callbacks);
+	constructor(hostname: string, settings: Settings, responseData: ConnectResponse) {
+		super(hostname, settings);
 		this.requestBase = `${settings.protocol}//${hostname}${settings.baseURL}`;
 		this.sessionTimeout = responseData.sessionTimeout;
 		this.sessionKey = responseData.sessionKey ?? null;
 		this.apiLevel = responseData.apiLevel || 0;
+	}
+
+	/**
+	 * Set the callbacks for connector events
+	 * @param callbacks Callbacks for future event notifications
+	 */
+	setCallbacks(callbacks: Callbacks) {
+		this.callbacks = callbacks;
+		this.callbacks.onConnectProgress(this, 0); // Don't hide the connection dialog while the full model is being loaded...
+
+		// Ideally we should be using a ServiceWorker here which would allow us to send push
+		// notifications even while the UI is running in the background. However, we cannot do
+		// this because ServiceWorkers require secured HTTP connections, which are no option
+		// for standard end-users. That is also the reason why they are disabled in the build
+		// script, which by default is used for improved caching
+		this.doUpdate();
 	}
 
 	/**
@@ -327,7 +328,7 @@ export class PollConnector extends BaseConnector {
 					}
 				}
 				this.partialModel.plugins.update(plugins);
-				this.callbacks.onUpdate(this, { plugins });
+				this.callbacks?.onUpdate(this, { plugins });
 			}
 		} catch (e) {
 			if (!(e instanceof FileNotFoundError)) {
@@ -364,7 +365,7 @@ export class PollConnector extends BaseConnector {
 				this.apiLevel = response.apiLevel || 0;
 				if (this.apiLevel > 0) {
 					// Don't hide the connection dialog while the full model is being loaded...
-					this.callbacks.onConnectProgress(this, 0);
+					this.callbacks?.onConnectProgress(this, 0);
 				}
 				this.doUpdate();
 				break;
@@ -492,12 +493,12 @@ export class PollConnector extends BaseConnector {
 							} while (next !== 0);
 
 							try {
-								this.callbacks.onUpdate(this, { [key]: keyResult });
+								this.callbacks?.onUpdate(this, { [key]: keyResult });
 							} catch (e) {
 								console.warn(e);
 							}
 
-							this.callbacks.onConnectProgress(this, (keyIndex++ / keysToQuery.length) * 100);
+							this.callbacks?.onConnectProgress(this, (keyIndex++ / keysToQuery.length) * 100);
 
 							// Need this to keep track of the layers
 							this.maintainPartialModel(key, keyResult);
@@ -508,7 +509,7 @@ export class PollConnector extends BaseConnector {
 							}
 						}
 					} finally {
-						this.callbacks.onConnectProgress(this, -1);
+						this.callbacks?.onConnectProgress(this, -1);
 					}
 				} else {
 					// Query live values
@@ -533,7 +534,7 @@ export class PollConnector extends BaseConnector {
 
 					// Try to apply new values
 					try {
-						this.callbacks.onUpdate(this, response.result);
+						this.callbacks?.onUpdate(this, response.result);
 					} catch (e) {
 						console.error(e);
 					}
@@ -557,7 +558,7 @@ export class PollConnector extends BaseConnector {
 							} while (next !== 0);
 
 							try {
-								this.callbacks.onUpdate(this, { [key]: keyResult });
+								this.callbacks?.onUpdate(this, { [key]: keyResult });
 							} catch (e) {
 								console.warn(e);
 							}
@@ -571,7 +572,7 @@ export class PollConnector extends BaseConnector {
 					if (seqs.volChanges instanceof Array) {
 						for (let i = 0; i < Math.min(seqs.volChanges.length, this.lastVolSeqs.length); i++) {
 							if (seqs.volChanges[i] !== this.lastVolSeqs[i]) {
-								this.callbacks.onVolumeChanged(this, i);
+								this.callbacks?.onVolumeChanged(this, i);
 							}
 						}
 						this.lastVolSeqs = seqs.volChanges;
@@ -603,7 +604,7 @@ export class PollConnector extends BaseConnector {
 
 				// See if we need to record more layer stats
 				if (this.updateLayersModel()) {
-					this.callbacks.onUpdate(this, {
+					this.callbacks?.onUpdate(this, {
 						job: {
 							layers: this.partialModel.job.layers
 						}
@@ -615,7 +616,7 @@ export class PollConnector extends BaseConnector {
 					this.partialModel.job.file.thumbnails.length > 0 && this.lastJobFile !== this.partialModel.job.file.fileName)
 				{
 					await this.getThumbnails(this.partialModel.job.file);
-					this.callbacks.onUpdate(this, {
+					this.callbacks?.onUpdate(this, {
 						job: {
 							file: {
 								thumbnails: this.partialModel.job.file.thumbnails
@@ -638,7 +639,7 @@ export class PollConnector extends BaseConnector {
 		} catch (e) {
 			if (!(e instanceof DisconnectedError)) {
 				this.isConnected = false;
-				this.callbacks.onConnectionError(this, e);
+				this.callbacks?.onConnectionError(this, e);
 			}
 		}
 	}
@@ -836,7 +837,7 @@ export class PollConnector extends BaseConnector {
 			this.pendingCodes = this.pendingCodes.filter(code => (seq !== null) && (code.seq >= seq));
 		} else if (reply !== "") {
 			// Forward generic messages to the machine module
-			this.callbacks.onUpdate(this, { messages: [initObject(Message, { content: reply })] });
+			this.callbacks?.onUpdate(this, { messages: [initObject(Message, { content: reply })] });
 		}
 	}
 
@@ -1109,7 +1110,7 @@ export class PollConnector extends BaseConnector {
 			}
 		}
 		this.partialModel.plugins.set(plugin.id, plugin);
-		this.callbacks.onUpdate(this, { plugins: this.partialModel.plugins });
+		this.callbacks?.onUpdate(this, { plugins: this.partialModel.plugins });
 		await this.upload(this.settings.pluginsFile, JSON.stringify(this.partialModel.plugins));
 
 		if (onProgress !== undefined) {
@@ -1138,7 +1139,7 @@ export class PollConnector extends BaseConnector {
 
 		// Uninstall the plugin manifest
 		this.partialModel.plugins.delete(plugin.id);
-		this.callbacks.onUpdate(this, { plugins: this.partialModel.plugins });
+		this.callbacks?.onUpdate(this, { plugins: this.partialModel.plugins });
 
 		// Delete DWC files
 		for (const dwcFile of plugin.dwcFiles) {

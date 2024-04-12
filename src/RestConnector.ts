@@ -2,8 +2,8 @@ import ObjectModel, { GCodeFileInfo, Plugin, PluginManifest, initObject } from "
 import JSZip from "jszip";
 
 import BaseConnector, { CancellationToken, FileListItem, OnProgressCallback } from "./BaseConnector";
-import ConnectorSettings from "./ConnectorSettings";
-import ConnectorCallbacks from "./ConnectorCallbacks";
+import Callbacks from "./Callbacks";
+import Settings from "./Settings";
 
 import {
 	NetworkError, DisconnectedError, TimeoutError, OperationCancelledError, OperationFailedError,
@@ -20,13 +20,12 @@ export class RestConnector extends BaseConnector {
 	 * Try to establish a connection to the given machine
 	 * @param hostname Hostname to connect to
 	 * @param settings Connector settings
-	 * @param callbacks Callbacks invoked by the connector
 	 * @throws {NetworkError} Failed to establish a connection
 	 * @throws {InvalidPasswordError} Invalid password
 	 * @throws {NoFreeSessionError} No more free sessions available
 	 * @throws {BadVersionError} Incompatible firmware version (no object model?)
 	 */
-	static override async connect(hostname: string, settings: ConnectorSettings, callbacks: ConnectorCallbacks): Promise<BaseConnector> {
+	static override async connect(hostname: string, settings: Settings): Promise<BaseConnector> {
 		const socketProtocol = (settings.protocol === "https:") ? "wss:" : "ws:";
 
 		// Attempt to get a session key first
@@ -65,10 +64,7 @@ export class RestConnector extends BaseConnector {
 			};
 		});
 
-		const connector = new RestConnector(hostname, settings, callbacks, socket, model as ObjectModel, sessionKey);
-		await callbacks.onLoadSettings(connector);	// Let the callee load settings from the machine being connected
-		connector.startSocket();
-		return connector;
+		return new RestConnector(hostname, settings, socket, model as ObjectModel, sessionKey);
 	}
 
 	/**
@@ -90,19 +86,27 @@ export class RestConnector extends BaseConnector {
 	 * Constructor of this connector class
 	 * @param hostname Hostname to connect to
 	 * @param settings Connector settings
-	 * @param callbacks Callbacks invoked by the connector
 	 * @param socket WebSocket instance for object model updates
 	 * @param model Object model data
 	 * @param sessionKey Session key for authorization
 	 */
-	constructor(hostname: string, settings: ConnectorSettings, callbacks: ConnectorCallbacks, socket: WebSocket, model: ObjectModel, sessionKey: string) {
-		super(hostname, settings, callbacks);
+	constructor(hostname: string, settings: Settings, socket: WebSocket, model: ObjectModel, sessionKey: string) {
+		super(hostname, settings);
 		this.requestBase = `${settings.protocol}//${hostname}${settings.baseURL}`;
 		this.socket = socket;
 		this.initialModel = model;
 		this.sessionKey = sessionKey;
+	}
 
-		callbacks.onUpdate(this, model);
+	/**
+	 * Set the callbacks for connector events
+	 * @param callbacks Callbacks for future event notifications
+	 */
+	setCallbacks(callbacks: Callbacks) {
+		this.callbacks = callbacks;
+		this.callbacks.onUpdate(this, this.initialModel);
+
+		this.startSocket();
 	}
 
 	/**
@@ -223,7 +227,6 @@ export class RestConnector extends BaseConnector {
 		this.socket!.onclose = this.onClose.bind(this);
 
 		// Update model and acknowledge receipt
-		this.callbacks.onUpdate(this, this.initialModel);
 		this.socket!.send("OK\n");
 	}
 
@@ -268,7 +271,7 @@ export class RestConnector extends BaseConnector {
 
 		// Process model updates
 		const data = JSON.parse(e.data);
-		this.callbacks.onUpdate(this, data);
+		this.callbacks?.onUpdate(this, data);
 
 		// Acknowledge receipt
 		if (this.settings.updateDelay > 0) {
@@ -292,7 +295,7 @@ export class RestConnector extends BaseConnector {
 			this.cancelRequests();
 			this.socket = null;
 			
-			this.callbacks.onConnectionError(this, e);
+			this.callbacks?.onConnectionError(this, e);
 		}
 	}
 
@@ -310,7 +313,7 @@ export class RestConnector extends BaseConnector {
 			this.cancelRequests();
 			this.socket = null;
 
-			this.callbacks.onConnectionError(this, new NetworkError(e.reason));
+			this.callbacks?.onConnectionError(this, new NetworkError(e.reason));
 		}
 	}
 
@@ -351,7 +354,7 @@ export class RestConnector extends BaseConnector {
 				}
 
 				// Dismiss pending notifications and resolve the connection attempt
-				this.callbacks.onReconnected(this);
+				this.callbacks?.onReconnected(this);
 				resolve();
 			}
             socket.onerror = (e: Event) => {

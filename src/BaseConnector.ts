@@ -1,14 +1,15 @@
 import { GCodeFileInfo, Plugin, PluginManifest } from "@duet3d/objectmodel";
 import JSZip from "jszip";
 
-import ConnectorCallbacks from "./ConnectorCallbacks";
-import ConnectorSettings from "./ConnectorSettings";
+import Callbacks from "./Callbacks";
+import Settings from "./Settings";
 import { NotImplementedError, NetworkError, TimeoutError, OperationCancelledError, OperationFailedError, FileNotFoundError, InvalidPasswordError } from "./errors";
 
 /**
  * Default timeout for HTTP requests (in ms)
  */
 export const defaultRequestTimeout = 4000;
+
 
 /**
  * Base class for network connectors that keep the machine data store up-to-date
@@ -80,15 +81,16 @@ export abstract class BaseConnector {
 	/**
 	 * Try to establish a connection to the given machine.
 	 * This should be overwritten by inherited classes
+	 * You MUST set the callbacks once a connector has been returned to keep comms running
 	 * @param hostname Hostname to connect to
 	 * @param settings Connector settings
-	 * @param callbacks Callbacks invoked by the connector
+	 * @param connectProgressCallback Callback to invoke while establishing a connection
 	 * @throws {NetworkError} Failed to establish a connection
 	 * @throws {InvalidPasswordError} Invalid password
 	 * @throws {NoFreeSessionError} No more free sessions available
 	 * @throws {BadVersionError} Incompatible firmware version (no object model?)
 	 */
-	static async connect(hostname: string, settings: ConnectorSettings, callbacks: ConnectorCallbacks): Promise<BaseConnector> {
+	static async connect(hostname: string, settings: Settings): Promise<BaseConnector> {
 		throw new NotImplementedError("connect");
 	}
 
@@ -100,12 +102,12 @@ export abstract class BaseConnector {
 	/**
 	 * General connector settings
 	 */
-	settings: ConnectorSettings;
+	settings: Settings;
 
 	/**
 	 * Callbacks invoked by the connector
 	 */
-	protected callbacks: ConnectorCallbacks;
+	protected callbacks: Callbacks | null = null;
 
 	/**
 	 * Request base URL for HTTP requests
@@ -117,10 +119,9 @@ export abstract class BaseConnector {
 	 * @param host Hostname of the remote machine
 	 * @param pass Optional password used for authentification
 	 */
-	constructor(host: string, settings: ConnectorSettings, callbacks: ConnectorCallbacks) {
+	constructor(host: string, settings: Settings) {
 		this.hostname = host;
 		this.settings = settings;
-		this.callbacks = callbacks;
 	}
 
 	/**
@@ -146,6 +147,12 @@ export abstract class BaseConnector {
 	request(method: string, path: string, params: Record<string, string | number | boolean> | null = null, responseType: XMLHttpRequestResponseType = "json", body: any = null, timeout?: number, filename?: string, cancellationToken?: CancellationToken, onProgress?: OnProgressCallback, retry = 0): Promise<any> {
 		throw new NotImplementedError("uninstallSystemPackage");
 	}
+
+	/**
+	 * Set the callbacks for connector events
+	 * @param callbacks Callbacks for future event notifications
+	 */
+	abstract setCallbacks(callbacks: Callbacks): void;
 
 	/**
 	 * Load enumeration of installed plugins.

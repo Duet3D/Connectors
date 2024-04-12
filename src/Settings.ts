@@ -1,7 +1,7 @@
 /**
  * General connector settings
  */
-export interface ConnectorSettings {
+export interface Settings {
     /**
      * Protocol to use for requests. Should be set to location.protocol
      */
@@ -75,7 +75,7 @@ export interface ConnectorSettings {
 
     //#endregion
 }
-export default ConnectorSettings
+export default Settings
 
 export const DefaultConnectorSettings = {
     /**

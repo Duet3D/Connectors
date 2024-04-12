@@ -1,5 +1,4 @@
-import ConnectorCallbacks from "./ConnectorCallbacks";
-import ConnectorSettings from "./ConnectorSettings";
+import Settings from "./Settings";
 
 import PollConnector from "./PollConnector";
 import RestConnector from "./RestConnector";
@@ -14,21 +13,21 @@ export const connectorTypes = [PollConnector, RestConnector];
 
 /**
  * Connect asynchronously and return a connector that could establish a connection.
- * If no connector could be found, the last error will be re-thrown
+ * If no connector could be found, the last error will be re-thrown.
+ * You MUST set the callbacks once a connector instance has been returned to keep the comms running.
  * @param hostname Hostname to connect to
  * @param settings Connector settings
- * @param callbacks Callbacks invoked by the connector
  * @returns Connector instance on success
  * @throws {NetworkError} Failed to establish a connection
  * @throws {InvalidPasswordError} Invalid password
  * @throws {NoFreeSessionError} No more free sessions available
  * @throws {BadVersionError} Incompatible firmware version (no object model?)
  */
-export async function connect(hostname: string, settings: ConnectorSettings, callbacks: ConnectorCallbacks) {
+export async function connect(hostname: string, settings: Settings) {
 	let lastError: Error = new LoginError();
 	for (const connectorType of connectorTypes) {
 		try {
-			return await connectorType.connect(hostname, settings, callbacks);
+			return await connectorType.connect(hostname, settings);
 		} catch (e) {
 			lastError = e as Error;
 			if (e instanceof LoginError) {
@@ -41,9 +40,9 @@ export async function connect(hostname: string, settings: ConnectorSettings, cal
 }
 
 export * from "./BaseConnector";
-export * from "./ConnectorCallbacks";
-export * from "./ConnectorSettings";
 export * from "./PollConnector";
 export * from "./RestConnector";
+export * from "./Callbacks";
+export * from "./Settings";
 export * from "./errors";
 // don't export internal utility functions
