@@ -1,4 +1,4 @@
-# ObjectModel
+# Connectors
 
 TypeScript implementation of the Duet3D HTTP connectors.
 
