@@ -77,7 +77,7 @@ export interface Settings {
 }
 export default Settings
 
-export const DefaultConnectorSettings = {
+export const DefaultSettings = {
     /**
      * Protocol to use for requests. Should be set to location.protocol
      */

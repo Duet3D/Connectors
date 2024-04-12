@@ -15,21 +15,18 @@ Please use the [forum](https://forum.duet3d.com) for support requests or the [Du
 The connector works for both Duets in SBC and standalone mode. Usage is as simple as:
 
 ```
-import { connect, BaseConnector, ConnectorCallbacks, DefaultConnectorSettings } from "@duet3d/connectors";
+import { connect, BaseConnector, Callbacks, DefaultSettings } from "@duet3d/connectors";
 import ObjectModel from "@duet3d/objectmodel";
 
 const model = new ObjectModel();
 
-const callbacks: ConnectorCallbacks = {
+const callbacks: Callbacks = {
     onConnectProgress: function (connector: BaseConnector, progress: number): void {
         if (progress === -1) {
             console.log("Connection attempt complete");
         } else {
             console.log("Connection progress: " + progress + "%");
         }
-    },
-    onLoadSettings: async function (connector: BaseConnector): Promise<void> {
-        // TODO download settings via connector
     },
     onConnectionError: function (connector: BaseConnector, reason: unknown): void {
         console.log("Connection error: " + reason);
@@ -48,13 +45,15 @@ const callbacks: ConnectorCallbacks = {
 };
 
 const settings = {
-    ...DefaultConnectorSettings,
+    ...DefaultSettings,
     // your custom settings
 };
 
 try {
-    const connector = connect(location.hostname, settings, callbacks);
-    // do whatever you want to do with the session, see BaseConnector reference
+    const connector = connect(location.hostname, settings);
+    // load machine settings
+    connector.setCallbacks(callbacks);
+    // do whatever you want to do with the session, see BaseConnector API
 } catch (e) {
     console.error("Failed to establish connection: " + e);
 }
