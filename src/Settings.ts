@@ -4,8 +4,9 @@
 export interface Settings {
     /**
      * Protocol to use for requests. Should be set to location.protocol
+     * Note that this value requires ':' at the end, else the URL will be invalid!
      */
-    protocol: "http:" | "https:";
+    protocol: string;
 
     /**
      * Base URL for HTTP requests. Should be set to process.env.BASE_URL
@@ -81,7 +82,7 @@ export const DefaultSettings = {
     /**
      * Protocol to use for requests. Should be set to location.protocol
      */
-    protocol: "http",
+    protocol: "http:",
 
     /**
      * Base URL for HTTP requests. Should be set to process.env.BASE_URL

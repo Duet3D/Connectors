@@ -58,7 +58,7 @@ export class PollConnector extends BaseConnector {
 	 * @throws {BadVersionError} Incompatible firmware version (no object model?)
 	 */
 	static override async connect(hostname: string, settings: Settings): Promise<BaseConnector> {
-		const response = await BaseConnector.request("GET", `${location.protocol}//${hostname}${settings.baseURL}rr_connect`, {
+		const response = await BaseConnector.request("GET", `${settings.protocol}//${hostname}${settings.baseURL}rr_connect`, {
 			password: settings.password,
 			time: timeToStr(new Date()),
 			sessionKey: "yes"
@@ -288,19 +288,24 @@ export class PollConnector extends BaseConnector {
 	}
 
 	/**
-	 * Set the callbacks for connector events
+	 * Set the callbacks for connector events.
+	 * Note that this may also provide some initial model data via callbacks.onUpdate()
 	 * @param callbacks Callbacks for future event notifications
 	 */
 	setCallbacks(callbacks: Callbacks) {
 		this.callbacks = callbacks;
-		this.callbacks.onConnectProgress(this, 0); // Don't hide the connection dialog while the full model is being loaded...
 
-		// Ideally we should be using a ServiceWorker here which would allow us to send push
-		// notifications even while the UI is running in the background. However, we cannot do
-		// this because ServiceWorkers require secured HTTP connections, which are no option
-		// for standard end-users. That is also the reason why they are disabled in the build
-		// script, which by default is used for improved caching
-		this.doUpdate();
+		if (this.cancelUpdateDelay === null) {
+			// Don't hide the connection dialog while the full model is being loaded...
+			this.callbacks.onConnectProgress(this, 0);
+
+			// Ideally we should be using a ServiceWorker here which would allow us to send push
+			// notifications even while the UI is running in the background. However, we cannot do
+			// this because ServiceWorkers require secured HTTP connections, which are no option
+			// for standard end-users. That is also the reason why they are disabled in the build
+			// script, which by default is used for improved caching
+			this.doUpdate();
+		}
 	}
 
 	/**
@@ -449,7 +454,7 @@ export class PollConnector extends BaseConnector {
 	pendingCodes: Array<PendingCode> = []
 
 	/**
-	 * Optional method to cancel the currnet update loop
+	 * Optional method to cancel the current update loop
 	 */
 	cancelUpdateDelay: ((reason?: any) => void) | null = null;
 

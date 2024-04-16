@@ -18,9 +18,26 @@ The connector works for both Duets in SBC and standalone mode. Usage is as simpl
 import { connect, BaseConnector, Callbacks, DefaultSettings } from "@duet3d/connectors";
 import ObjectModel from "@duet3d/objectmodel";
 
-const model = new ObjectModel();
+// use initial settings
+const settings = {
+    ...DefaultSettings,
+    // your custom settings
+};
 
-const callbacks: Callbacks = {
+// try to establish a connection
+let connector: BaseConnector;
+try {
+    const connector = connect(location.hostname, settings);
+} catch (e) {
+    console.error("Failed to establish connection: " + e);
+    return;
+}
+
+// load settings from the machine - you can then update "settings" from your loaded settings again
+
+// set up object model instance and stay updated via callbacks
+const model = new ObjectModel();
+connector.setCallbacks({
     onConnectProgress: function (connector: BaseConnector, progress: number): void {
         if (progress === -1) {
             console.log("Connection attempt complete");
@@ -42,19 +59,7 @@ const callbacks: Callbacks = {
     onVolumeChanged: function (connector: BaseConnector, volumeIndex: number): void {
         // TODO reload file browser lists of the given volume
     }
-};
+});
 
-const settings = {
-    ...DefaultSettings,
-    // your custom settings
-};
-
-try {
-    const connector = connect(location.hostname, settings);
-    // load machine settings
-    connector.setCallbacks(callbacks);
-    // do whatever you want to do with the session, see BaseConnector API
-} catch (e) {
-    console.error("Failed to establish connection: " + e);
-}
+// do whatever you want to do with the session, see BaseConnector API
 ```

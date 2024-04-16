@@ -63,7 +63,6 @@ export class RestConnector extends BaseConnector {
 				}
 			};
 		});
-
 		return new RestConnector(hostname, settings, socket, model as ObjectModel, sessionKey);
 	}
 
@@ -92,21 +91,26 @@ export class RestConnector extends BaseConnector {
 	 */
 	constructor(hostname: string, settings: Settings, socket: WebSocket, model: ObjectModel, sessionKey: string) {
 		super(hostname, settings);
+		this.initialModel = model;
 		this.requestBase = `${settings.protocol}//${hostname}${settings.baseURL}`;
 		this.socket = socket;
-		this.initialModel = model;
 		this.sessionKey = sessionKey;
 	}
 
 	/**
-	 * Set the callbacks for connector events
+	 * Set the callbacks for connector events.
+	 * Note that this may also provide some initial model data via callbacks.onUpdate()
 	 * @param callbacks Callbacks for future event notifications
 	 */
 	setCallbacks(callbacks: Callbacks) {
 		this.callbacks = callbacks;
-		this.callbacks.onUpdate(this, this.initialModel);
 
-		this.startSocket();
+		if (this.initialModel !== null) {
+			this.startSocket();
+
+			callbacks.onUpdate(this, this.initialModel);
+			this.initialModel = null;
+		}
 	}
 
 	/**
@@ -341,17 +345,11 @@ export class RestConnector extends BaseConnector {
 		// Attempt to reconnect
 		await new Promise<void>((resolve, reject) => {
 			const socketProtocol = (this.settings.protocol === "https:") ? "wss:" : "ws:";
-			const lastDsfVersion = this.initialModel?.sbc?.dsf?.version;
 			const socket = new WebSocket(`${socketProtocol}//${this.hostname}${this.settings.baseURL}machine${(this.sessionKey ? `?sessionKey=${this.sessionKey}` : "")}`);
 			socket.onmessage = (e) => {
 				// Successfully connected, the first message is the full object model
 				this.initialModel = JSON.parse(e.data);
 				this.socket = socket;
-
-				// Check if DSF has been updated
-				if (lastDsfVersion !== this.initialModel?.sbc?.dsf?.version) {
-					location.reload();
-				}
 
 				// Dismiss pending notifications and resolve the connection attempt
 				this.callbacks?.onReconnected(this);
@@ -372,7 +370,7 @@ export class RestConnector extends BaseConnector {
 		});
 
 		// Apply new socket and machine model
-		await this.startSocket();
+		this.startSocket();
 	}
 
 	/**

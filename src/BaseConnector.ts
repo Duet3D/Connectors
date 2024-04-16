@@ -149,7 +149,8 @@ export abstract class BaseConnector {
 	}
 
 	/**
-	 * Set the callbacks for connector events
+	 * Set the callbacks for connector events.
+	 * Note that this may also provide some initial model data via callbacks.onUpdate()
 	 * @param callbacks Callbacks for future event notifications
 	 */
 	abstract setCallbacks(callbacks: Callbacks): void;
