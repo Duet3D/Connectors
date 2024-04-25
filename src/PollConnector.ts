@@ -364,7 +364,7 @@ export class PollConnector extends BaseConnector {
 		
 		switch (response.err) {
 			case 0:
-				this.justConnected = true;
+				this.isConnected = this.justConnected = true;
 				this.sessionTimeout = response.sessionTimeout;
 				this.sessionKey = response.sessionKey ?? null;
 				this.apiLevel = response.apiLevel || 0;
