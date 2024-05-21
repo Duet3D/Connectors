@@ -105,12 +105,6 @@ export const DefaultSettings = {
     password: "",
 
     /**
-     * Number of retries for HTTP requests (in ms)
-     * Note that increasing the number of retries decreases the timeout for each HTTP request due to the predefined session timeout
-     */
-    maxRetries: 2,
-
-    /**
      * Store of the model.plugins[] content or null if plugin functionality is disabled
      * This is only used by the PollConnector in standalone mode. In SBC mode, the object model already provides plugins[] as part of the object model 
      */
@@ -133,6 +127,17 @@ export const DefaultSettings = {
      * Maximum threshold of HTTP request data lengths for automatic retries on error (in bytes)
      */
     fileTransferRetryThreshold: 358400,			// 350 KiB
+
+    /**
+     * Number of retries for HTTP requests (in ms)
+     * Note that increasing the number of retries decreases the timeout for each HTTP request due to the predefined session timeout
+     */
+    maxRetries: 2,
+
+    /**
+     * Time to wait before retrying a failed HTTP request (in ms)
+     */
+    retryDelay: 2000,
 
     /**
      * Update interval of rr_model requests (in ms)
