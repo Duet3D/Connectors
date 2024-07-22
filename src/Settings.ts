@@ -42,7 +42,7 @@ export interface Settings {
      */
     crcUploads: boolean;
 
-    /*
+    /**
      * Maximum threshold of HTTP request data lengths for automatic retries on error (in bytes)
      */
     fileTransferRetryThreshold: number;

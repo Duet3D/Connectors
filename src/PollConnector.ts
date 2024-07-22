@@ -88,27 +88,27 @@ export class PollConnector extends BaseConnector {
 	/**
 	 * Indicates if the connection maintained by this particular instance is live
 	 */
-	isConnected = true;
+	private isConnected = true;
 
 	/**
 	 * Indicates if a connection was just established
 	 */
-	justConnected = true;
+	private justConnected = true;
 
 	/**
 	 * API level of the remote HTTP server
 	 */
-	apiLevel = 0;
+	private apiLevel = 0;
 
 	/**
 	 * Optional session key in case the remote server supports it
 	 */
-	sessionKey: number | null = null;
+	private sessionKey: number | null = null;
 
 	/**
 	 * List of HTTP requests being executed
 	 */
-	requests: Array<XMLHttpRequest> = []
+	private requests: Array<XMLHttpRequest> = []
 
 	/**
 	 * Make an arbitrary HTTP request to the machine
@@ -259,7 +259,7 @@ export class PollConnector extends BaseConnector {
 	/**
 	 * Cancel all pending HTTP requests
 	 */
-	cancelRequests() {
+	private cancelRequests() {
 		this.pendingCodes.forEach(code => code.reject(new DisconnectedError()));
 		this.pendingCodes = [];
 		this.requests.forEach(request => request.abort());
@@ -397,44 +397,44 @@ export class PollConnector extends BaseConnector {
 	/**
 	 * Last-known job file (used for fetching thumbnails)
 	 */
-	lastJobFile: string | null = null
+	private lastJobFile: string | null = null
 
 	/**
 	 * Collection of the last sequence numbers
 	 */
-	lastSeqs: Record<string, number> = {}
+	private lastSeqs: Record<string, number> = {}
 
 	/**
 	 * Collection of the last volume sequence numbers
 	 */
-	lastVolSeqs: Array<number> = []
+	private lastVolSeqs: Array<number> = []
 
 	/**
 	 * Last-known machine status
 	 */
-	lastStatus: MachineStatus | null = null;
+	private lastStatus: MachineStatus | null = null;
 
 	/**
 	 * Indicates if a simulation was being done
 	 */
-	wasSimulating: boolean = false;
+	private wasSimulating: boolean = false;
 
 	/**
 	 * Last-known uptime
 	 */
-	lastUptime = 0
+	private lastUptime = 0
 
 	/**
 	 * Partial object model used to populate the layers
 	 */
-	partialModel: ObjectModel = new ObjectModel();
+	private partialModel: ObjectModel = new ObjectModel();
 
 	/**
 	 * Update parts of the internal object model copy
 	 * @param key Key to update or null if it is a live response
 	 * @param data Model update data
 	 */
-	maintainPartialModel(key: string | null, data: any) {
+	private maintainPartialModel(key: string | null, data: any) {
 		if (key === null) {
 			this.partialModel.update(data);
 		} else if (["directories", "job", "move", "state"].includes(key)) {
@@ -445,17 +445,17 @@ export class PollConnector extends BaseConnector {
 	/**
 	 * List of pending codes to be resolved
 	 */
-	pendingCodes: Array<PendingCode> = []
+	private pendingCodes: Array<PendingCode> = []
 
 	/**
 	 * Optional method to cancel the current update loop
 	 */
-	cancelUpdateDelay: ((reason?: any) => void) | null = null;
+	private cancelUpdateDelay: ((reason?: any) => void) | null = null;
 
 	/*
 	 * Method to maintin the current session
 	 */
-	async doUpdate() {
+	private async doUpdate() {
 		try {
 			do {
 				if (this.justConnected) {
@@ -491,16 +491,17 @@ export class PollConnector extends BaseConnector {
 								}
 							} while (next !== 0);
 
+							// Need this to keep track of the layers
+							this.maintainPartialModel(key, keyResult);
+
+							// Update main object model
 							try {
 								this.callbacks?.onUpdate(this, { [key]: keyResult });
 							} catch (e) {
-								console.warn(e);
+								console.error(e);
 							}
 
 							this.callbacks?.onConnectProgress(this, (keyIndex++ / keysToQuery.length) * 100);
-
-							// Need this to keep track of the layers
-							this.maintainPartialModel(key, keyResult);
 
 							// Keep track of the last uptime to detect firmware resets
 							if (key === "state") {
@@ -513,7 +514,6 @@ export class PollConnector extends BaseConnector {
 				} else {
 					// Query live values
 					const response = await this.request("GET", "rr_model", { flags: "d99fn" });
-					this.partialModel.update(response.result);
 
 					// Remove seqs key, it is only maintained by the connector
 					const seqs = response.result.seqs;
@@ -531,13 +531,16 @@ export class PollConnector extends BaseConnector {
 						this.wasSimulating = false;
 					}
 
-					// Try to apply new values
+					// Need this to keep track of the layers
+					this.maintainPartialModel(null, response.result);
+
+					// Update main object model
 					try {
 						this.callbacks?.onUpdate(this, response.result);
 					} catch (e) {
 						console.error(e);
 					}
-
+							
 					// Check if any of the non-live fields have changed and query them if so
 					for (let key of keysToQuery) {
 						if (this.lastSeqs[key] !== seqs[key]) {
@@ -556,14 +559,16 @@ export class PollConnector extends BaseConnector {
 								}
 							} while (next !== 0);
 
-							try {
-								this.callbacks?.onUpdate(this, { [key]: keyResult });
-							} catch (e) {
-								console.warn(e);
-							}
 
 							// Need this to keep track of the layers
 							this.maintainPartialModel(key, keyResult);
+
+							// Update main object model
+							try {
+								this.callbacks?.onUpdate(this, { [key]: keyResult });
+							} catch (e) {
+								console.error(e);
+							}
 						}
 					}
 
@@ -646,27 +651,27 @@ export class PollConnector extends BaseConnector {
 	/**
 	 * Last layer number
 	 */
-	lastLayer = -1;
+	private lastLayer = -1;
 
 	/**
 	 * Last print duration
 	 */
-	lastDuration = 0;
+	private lastDuration = 0;
 
 	/**
 	 * Last filament usage per extruder (in mm)
 	 */
-	lastFilamentUsage: Array<number> = [];
+	private lastFilamentUsage: Array<number> = [];
 
 	/**
 	 * Last file position (in bytes)
 	 */
-	lastFilePosition = 0;
+	private lastFilePosition = 0;
 
 	/**
 	 * Last print height
 	 */
-	lastHeight = 0;
+	private lastHeight = 0;
 
 	/**
 	 * Update the layers, RRF does not keep track of them
