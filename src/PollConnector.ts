@@ -438,7 +438,7 @@ export class PollConnector extends BaseConnector {
 		if (key === null) {
 			this.partialModel.update(data);
 		} else if (["directories", "job", "move", "state"].includes(key)) {
-			this.partialModel.update({ key: data });
+			this.partialModel.update({ [key]: data });
 		}
 	}
 
@@ -677,7 +677,7 @@ export class PollConnector extends BaseConnector {
 	 * Update the layers, RRF does not keep track of them
 	 * @returns Whether any layers could be updated
 	 */
-	updateLayersModel() {
+	private updateLayersModel() {
 		// Are we printing?
 		if (this.partialModel.job.duration === null || this.partialModel.job.file === null) {
 			if (this.lastLayer !== -1) {
