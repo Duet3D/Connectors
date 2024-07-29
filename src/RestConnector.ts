@@ -348,8 +348,9 @@ export class RestConnector extends BaseConnector {
 			const socket = new WebSocket(`${socketProtocol}//${this.hostname}${this.settings.baseURL}machine${(this.sessionKey ? `?sessionKey=${this.sessionKey}` : "")}`);
 			socket.onmessage = (e) => {
 				// Successfully connected, the first message is the full object model
-				this.initialModel = JSON.parse(e.data);
+				const fullModel = JSON.parse(e.data);
 				this.socket = socket;
+				this.callbacks?.onUpdate(this, fullModel);
 
 				// Dismiss pending notifications and resolve the connection attempt
 				this.callbacks?.onReconnected(this);
