@@ -1143,7 +1143,7 @@ export class PollConnector extends BaseConnector {
 
 		// Uninstall the plugin manifest
 		this.partialModel.plugins.delete(plugin.id);
-		this.callbacks?.onUpdate(this, { [plugin.id]: null });
+		this.callbacks?.onUpdate(this, { plugins: { [plugin.id]: null } });
 
 		// Delete DWC files
 		for (const dwcFile of plugin.dwcFiles) {
