@@ -1,6 +1,6 @@
 import ObjectModel, { AxisLetter, GCodeFileInfo, Job, Layer, MachineStatus, Message, Plugin, PluginManifest, initObject } from "@duet3d/objectmodel";
 import JSZip from "jszip";
-import { CRC32 } from "@tsxper/crc32";
+import { crc32 } from "@foxglove/crc";
 
 import BaseConnector, { CancellationToken, FileListItem, OnProgressCallback } from "./BaseConnector";
 import Settings from "./Settings";
@@ -865,9 +865,8 @@ export class PollConnector extends BaseConnector {
 			const checksum = await new Promise<number>((resolve, reject) => {
 				const fileReader = new FileReader();
 				fileReader.onload = (e) => {
-					if (e.target !== null && e.target.result !== null) {
-						const crc32 = new CRC32();
-						const result = (typeof e.target.result === "string") ? crc32.forString(e.target.result) : crc32.forBytes(new Uint8Array(e.target.result));
+					if (e.target !== null && e.target.result !== null && typeof(e.target.result) !== "string") {
+						const result = crc32(new Uint8Array(e.target.result));
 						resolve(result);
 					} else {
 						reject(new OperationFailedError("failed to read file for CRC checksum calculation"));
