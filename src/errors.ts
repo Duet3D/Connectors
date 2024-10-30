@@ -2,6 +2,11 @@
  * Abstract method not implemented
  */
 export class NotImplementedError extends Error {
+    override name: string = "NotImplementedError";
+
+    /**
+     * Name of the method that is not implemented
+     */
     field: string;
 
     constructor(field: string) {
@@ -14,6 +19,11 @@ export class NotImplementedError extends Error {
  * Base class for network errors
  */
 export class NetworkError extends Error {
+    override name: string = "NetworkError";
+
+    /**
+     * Reason for the error, if any
+     */
     reason: string | null;
 
     constructor(reason: string | null = null) {
@@ -26,6 +36,8 @@ export class NetworkError extends Error {
  * Session terminated while an action was being performed
  */
 export class DisconnectedError extends NetworkError {
+    override name: string = "DisconnectedError";
+
     constructor() {
         super("Could not complete action because the connection has been terminated");
 	}
@@ -35,6 +47,8 @@ export class DisconnectedError extends NetworkError {
  * Request timed out
  */
 export class TimeoutError extends NetworkError {
+    override name: string = "TimeoutError";
+
     constructor() {
         super("Request timed out");
 	}
@@ -44,6 +58,8 @@ export class TimeoutError extends NetworkError {
  * Operation was cancelled
  */
 export class OperationCancelledError extends NetworkError {
+    override name: string = "OperationCancelledError";
+
     constructor() {
         super("Operation cancelled");
 	}
@@ -53,6 +69,11 @@ export class OperationCancelledError extends NetworkError {
  * Operation failed (e.g. firmware returned error code)
  */
 export class OperationFailedError extends NetworkError {
+    override name: string = "OperationFailedError";
+
+    /**
+     * Reason for the failure
+     */
 	reason: string | null = null;
 
     constructor(reason: string | null = null) {
@@ -65,6 +86,11 @@ export class OperationFailedError extends NetworkError {
  * Base class for file IO errors
  */
 export class FileError extends Error {
+    override name: string = "FileError";
+
+    /**
+     * Reason for the error, if any
+     */
     reason: string | null;
 
     constructor(reason: string | null) {
@@ -77,6 +103,8 @@ export class FileError extends Error {
  * Requested drive is not mounted
  */
 export class DriveUnmountedError extends FileError {
+    override name: string = "DriveUnmountedError";
+
     constructor() {
         super("Drive is not mounted");
 	}
@@ -86,6 +114,11 @@ export class DriveUnmountedError extends FileError {
  * Requested file not found
  */
 export class FileNotFoundError extends FileError {
+    override name: string = "FileNotFoundError";
+
+    /**
+     * Path to the file that was not found
+     */
     file: string | null;
 
     constructor(file: string | null = null) {
@@ -98,6 +131,11 @@ export class FileNotFoundError extends FileError {
  * Requested directory not found
  */
 export class DirectoryNotFoundError extends FileError {
+    override name: string = "DirectoryNotFoundError";
+
+    /**
+     * Path to the directory that was not found
+     */
     directory: string | null;
 
 	constructor(directory: string | null = null) {
@@ -109,9 +147,16 @@ export class DirectoryNotFoundError extends FileError {
 /**
  * Base class for login errors (returned by the connect function)
  */
-export class LoginError extends Error {}
+export class LoginError extends Error {
+    override name: string = "LoginError";
+}
 
+/**
+ * Error thrown when the password is invalid
+ */
 export class InvalidPasswordError extends LoginError {
+    override name: string = "InvalidPasswordError";
+
     constructor() {
         super("Invalid password");
 	}
