@@ -920,7 +920,7 @@ export class PollConnector extends BaseConnector {
 			deleteexisting: force ? "yes" : "no"
 		}, "json", null, undefined, from);
 
-		if (response.err !== 0) {
+		if (!force && response.err !== 0) {
 			throw new OperationFailedError(`err ${response.err}`);
 		}
 	}
