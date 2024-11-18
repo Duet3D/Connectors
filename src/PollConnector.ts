@@ -942,8 +942,12 @@ export class PollConnector extends BaseConnector {
 	 * @param type Optional type of the received data (defaults to JSON)
 	 * @param cancellationToken Optional cancellation token that may be triggered to cancel this operation
 	 * @param onProgress Optional callback for progress reports
+	 * @param rawPath Obtain file from DWC base path instead of (virtual) SD card
 	 */
-	async download(filename: string, type?: XMLHttpRequestResponseType, cancellationToken?: CancellationToken, onProgress?: OnProgressCallback): Promise<any> {
+	async download(filename: string, type?: XMLHttpRequestResponseType, cancellationToken?: CancellationToken, onProgress?: OnProgressCallback, rawPath?: boolean): Promise<any> {
+		if (rawPath) {
+			return await this.request("GET", filename, null, type, null, 0, filename, cancellationToken, onProgress);
+		}
 		return await this.request("GET", "rr_download", { name: filename }, type, null, 0, filename, cancellationToken, onProgress);
 	}
 
