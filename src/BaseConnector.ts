@@ -133,7 +133,7 @@ export abstract class BaseConnector {
 	 * @param body Optional body content to send as part of this request
 	 * @param timeout Optional request timeout
 	 * @param filename Optional filename for file/directory requests
-	 * @param cancellationToken Optional cancellation token that may be triggered to cancel this operation
+	 * @param cancellationToken Optional cancellation token or abort signal that may be triggered to cancel this operation
 	 * @param onProgress Optional callback for progress reports
 	 * @param retry Current retry number (only used internally)
 	 * @returns Promise to be resolved when the request finishes
@@ -144,7 +144,7 @@ export abstract class BaseConnector {
 	 * @throws {NetworkError} Failed to establish a connection
 	 * @throws {TimeoutError} A timeout has occurred
 	 */
-	request(method: string, path: string, params: Record<string, string | number | boolean> | null = null, responseType: XMLHttpRequestResponseType = "json", body: any = null, timeout?: number, filename?: string, cancellationToken?: CancellationToken, onProgress?: OnProgressCallback, retry = 0): Promise<any> {
+	request(method: string, path: string, params: Record<string, string | number | boolean> | null = null, responseType: XMLHttpRequestResponseType = "json", body: any = null, timeout?: number, filename?: string, cancellationToken?: CancellationToken | AbortSignal, onProgress?: OnProgressCallback, retry = 0): Promise<any> {
 		throw new NotImplementedError("uninstallSystemPackage");
 	}
 
@@ -183,10 +183,10 @@ export abstract class BaseConnector {
 	 * Upload a file
 	 * @param filename Destination path of the file to upload
 	 * @param content Content of the target file
-	 * @param cancellationToken Optional cancellation token that may be triggered to cancel this operation
+	 * @param cancellationToken Optional cancellation token or abort signal that may be triggered to cancel this operation
 	 * @param onProgress Optional callback for progress reports
 	 */
-	abstract upload(filename: string, content: string | Blob | File, cancellationToken?: CancellationToken, onProgress?: OnProgressCallback): Promise<void>;
+	abstract upload(filename: string, content: string | Blob | File, cancellationToken?: CancellationToken | AbortSignal, onProgress?: OnProgressCallback): Promise<void>;
 
 	/**
 	 * Delete a file or directory
@@ -213,11 +213,11 @@ export abstract class BaseConnector {
 	 * Download a file
 	 * @param filename Path of the file to download
 	 * @param type Optional type of the received data (defaults to JSON)
-	 * @param cancellationToken Optional cancellation token that may be triggered to cancel this operation
+	 * @param cancellationToken Optional cancellation token or abort signal that may be triggered to cancel this operation
 	 * @param onProgress Optional callback for progress reports
 	 * @param rawPath Obtain file from DWC base path instead of (virtual) SD card
 	 */
-	abstract download(filename: string, type?: XMLHttpRequestResponseType, cancellationToken?: CancellationToken, onProgress?: OnProgressCallback, rawPath?: boolean): Promise<any>;
+	abstract download(filename: string, type?: XMLHttpRequestResponseType, cancellationToken?: CancellationToken | AbortSignal, onProgress?: OnProgressCallback, rawPath?: boolean): Promise<any>;
 
 	/**
 	 * List the files and directories from a given directory
@@ -275,10 +275,10 @@ export abstract class BaseConnector {
 	 * Since this is a potential security hazard, this call is only supported if the DSF is configured to permit system package installations
 	 * @param filename Name of the package file
 	 * @param packageData Blob data of the package to install 
-	 * @param cancellationToken Optional cancellation token that may be triggered to cancel this operation
+	 * @param cancellationToken Optional cancellation token or abort signal that may be triggered to cancel this operation
 	 * @param onProgress Optional callback for progress reports
 	 */
-	installSystemPackage(filename: string, packageData: Blob, cancellationToken?: CancellationToken, onProgress?: OnProgressCallback): Promise<void> { throw new NotImplementedError("installSystemPackage"); }
+	installSystemPackage(filename: string, packageData: Blob, cancellationToken?: CancellationToken | AbortSignal, onProgress?: OnProgressCallback): Promise<void> { throw new NotImplementedError("installSystemPackage"); }
 
 	/**
 	 * Uninstall a system package from the SBC.

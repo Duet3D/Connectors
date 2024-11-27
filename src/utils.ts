@@ -82,3 +82,12 @@ export function strToTime(str: string) {
 	}
 	return null;
 }
+
+/**
+ * Check if the given object is an AbortSignal
+ * @param signal Object to check
+ * @returns Whether the object is an AbortSignal
+ */
+export function isAbortSignal(signal: any): signal is AbortSignal {
+	return signal && typeof signal === "object" && "aborted" in signal;
+}

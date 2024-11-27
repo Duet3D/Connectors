@@ -12,7 +12,7 @@ import {
 	LoginError, BadVersionError, InvalidPasswordError, NoFreeSessionError,
 	CodeResponseError, CodeBufferError
 } from "./errors";
-import { combinePath, isPaused, isPrinting, strToTime, timeToStr } from "./utils";
+import { combinePath, isAbortSignal, isPaused, isPrinting, strToTime, timeToStr } from "./utils";
 
 /**
  * Keys in the object model to skip when performing a query
@@ -119,7 +119,7 @@ export class PollConnector extends BaseConnector {
 	 * @param body Optional body content to send as part of this request
 	 * @param timeout Optional request timeout
 	 * @param filename Optional filename for file/directory requests
-	 * @param cancellationToken Optional cancellation token that may be triggered to cancel this operation
+	 * @param cancellationToken Optional cancellation token or abort signal that may be triggered to cancel this operation
 	 * @param onProgress Optional callback for progress reports
 	 * @param retry Current retry number (only used internally)
 	 * @returns Promise to be resolved when the request finishes
@@ -130,7 +130,7 @@ export class PollConnector extends BaseConnector {
 	 * @throws {NetworkError} Failed to establish a connection
 	 * @throws {TimeoutError} A timeout has occurred
 	 */
-	override async request(method: string, path: string, params: Record<string, string | number | boolean> | null = null, responseType: XMLHttpRequestResponseType = "json", body: any = null, timeout?: number, filename?: string, cancellationToken?: CancellationToken, onProgress?: OnProgressCallback, retry = 0): Promise<any> {
+	override async request(method: string, path: string, params: Record<string, string | number | boolean> | null = null, responseType: XMLHttpRequestResponseType = "json", body: any = null, timeout?: number, filename?: string, cancellationToken?: CancellationToken | AbortSignal, onProgress?: OnProgressCallback, retry = 0): Promise<any> {
 		let internalURL = this.requestBase + path;
 		if (params !== null) {
 			let hadParam = false;
@@ -156,7 +156,20 @@ export class PollConnector extends BaseConnector {
 		}
 		xhr.timeout = timeout ?? this.sessionTimeout / (this.settings.maxRetries + 1);
 		if (cancellationToken) {
-			cancellationToken.cancel = () => xhr.abort();
+			if (isAbortSignal(cancellationToken)) {
+				function abortSignalReceived() {
+					xhr.abort();
+				}
+
+				cancellationToken.addEventListener("abort", abortSignalReceived);
+				xhr.onreadystatechange = () => {
+					if (xhr.readyState === 4 /*DONE_STATE*/) {
+						cancellationToken.removeEventListener("abort", abortSignalReceived);
+					}
+				};
+			} else {
+				cancellationToken.cancel = () => xhr.abort();
+			}
 		}
 		this.requests.push(xhr);
 
@@ -849,10 +862,10 @@ export class PollConnector extends BaseConnector {
 	 * Upload a file
 	 * @param filename Destination path of the file to upload
 	 * @param content Content of the target file
-	 * @param cancellationToken Optional cancellation token that may be triggered to cancel this operation
+	 * @param cancellationToken Optional cancellation token or abort signal that may be triggered to cancel this operation
 	 * @param onProgress Optional callback for progress reports
 	 */
-	async upload(filename: string, content: string | Blob | File, cancellationToken?: CancellationToken, onProgress?: OnProgressCallback): Promise<void> {
+	async upload(filename: string, content: string | Blob | File, cancellationToken?: CancellationToken | AbortSignal, onProgress?: OnProgressCallback): Promise<void> {
 		// Create upload options
 		const payload = (content instanceof Blob) ? content : new Blob([content]);
 		const params: Record<string, any> = {
@@ -940,11 +953,11 @@ export class PollConnector extends BaseConnector {
 	 * Download a file
 	 * @param filename Path of the file to download
 	 * @param type Optional type of the received data (defaults to JSON)
-	 * @param cancellationToken Optional cancellation token that may be triggered to cancel this operation
+	 * @param cancellationToken Optional cancellation token or abort signal that may be triggered to cancel this operation
 	 * @param onProgress Optional callback for progress reports
 	 * @param rawPath Obtain file from DWC base path instead of (virtual) SD card
 	 */
-	async download(filename: string, type?: XMLHttpRequestResponseType, cancellationToken?: CancellationToken, onProgress?: OnProgressCallback, rawPath?: boolean): Promise<any> {
+	async download(filename: string, type?: XMLHttpRequestResponseType, cancellationToken?: CancellationToken | AbortSignal, onProgress?: OnProgressCallback, rawPath?: boolean): Promise<any> {
 		if (rawPath) {
 			return await this.request("GET", filename, null, type, null, 0, filename, cancellationToken, onProgress);
 		}
