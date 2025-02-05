@@ -408,6 +408,11 @@ export class PollConnector extends BaseConnector {
 	}
 
 	/**
+	 * List of pending codes to be resolved
+	 */
+	private pendingCodes: Array<PendingCode> = [];
+
+	/**
 	 * Last-known job file (used for fetching thumbnails)
 	 */
 	private lastJobFile: string | null = null
@@ -456,9 +461,28 @@ export class PollConnector extends BaseConnector {
 	}
 
 	/**
-	 * List of pending codes to be resolved
+	 * 
+	 * @param key Key to query
+	 * @param requestArray Whether the key is an array
+	 * @returns Object model result
 	 */
-	private pendingCodes: Array<PendingCode> = []
+	async queryObjectModel(key: string, flags?: string, requestArray: boolean = false): Promise<any> {
+		let keyResult = null, next = 0;
+		do {
+			const keyResponse = await this.request("GET", "rr_model", {
+				key,
+				flags: flags + ((next !== 0 || requestArray) ? `a${next}` : "")
+			});
+
+			next = keyResponse.next ? keyResponse.next : 0;
+			if (keyResult === null || !(keyResult instanceof Array)) {
+				keyResult = keyResponse.result;
+			} else {
+				keyResult = keyResult.concat(keyResponse.result);
+			}
+		} while (next !== 0);
+		return keyResult;
+	}
 
 	/**
 	 * Optional method to cancel the current update loop
@@ -557,24 +581,17 @@ export class PollConnector extends BaseConnector {
 					// Check if any of the non-live fields have changed and query them if so
 					for (let key of keysToQuery) {
 						if (this.lastSeqs[key] !== seqs[key]) {
-							let keyResult = null, next = 0;
-							do {
-								const keyResponse = await this.request("GET", "rr_model", {
-									key,
-									flags: (next === 0) ? "d99vn" : `d99vna${next}`
-								});
+							const keyResult = await this.queryObjectModel(key, "d99vno");
+							if (key === "move" && keyResult.axes.length >= 9) {
+								keyResult.axes = await this.queryObjectModel("move.axes", "d99vno", true);
+							}
 
-								next = keyResponse.next ? keyResponse.next : 0;
-								if (keyResult === null || !(keyResult instanceof Array)) {
-									keyResult = keyResponse.result;
-								} else {
-									keyResult = keyResult.concat(keyResponse.result);
-								}
-							} while (next !== 0);
-
-
-							// Need this to keep track of the layers
-							this.maintainPartialModel(key, keyResult);
+							// Maintain internal model data
+							try {
+								this.maintainPartialModel(key, keyResult);
+							} catch (e) {
+								console.warn(e);
+							}
 
 							// Update main object model
 							try {
