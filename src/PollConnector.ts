@@ -513,20 +513,11 @@ export class PollConnector extends BaseConnector {
 						let keyIndex = 1;
 						for (let i = 0; i < keysToQuery.length; i++) {
 							const key = keysToQuery[i];
-							let keyResult = null, next = 0;
-							do {
-								const keyResponse = await this.request("GET", "rr_model", {
-									key,
-									flags: (next === 0) ? "d99vn" : `d99vna${next}`
-								});
-
-								next = keyResponse.next ? keyResponse.next : 0;
-								if (keyResult === null || !(keyResult instanceof Array)) {
-									keyResult = keyResponse.result;
-								} else {
-									keyResult = keyResult.concat(keyResponse.result);
-								}
-							} while (next !== 0);
+							
+							const keyResult = await this.queryObjectModel(key, "d99vno");
+							if (key === "move" && keyResult.axes.length >= 9) {
+								keyResult.axes = await this.queryObjectModel("move.axes", "d99vno", true);
+							}
 
 							// Need this to keep track of the layers
 							this.maintainPartialModel(key, keyResult);
