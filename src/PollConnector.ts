@@ -455,7 +455,7 @@ export class PollConnector extends BaseConnector {
 	private maintainPartialModel(key: string | null, data: any) {
 		if (key === null) {
 			this.partialModel.update(data);
-		} else if (["directories", "job", "move", "state"].includes(key)) {
+		} else if (["directories", "limits", "job", "move", "state"].includes(key)) {
 			this.partialModel.update({ [key]: data });
 		}
 	}
