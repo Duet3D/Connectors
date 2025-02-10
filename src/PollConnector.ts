@@ -515,7 +515,7 @@ export class PollConnector extends BaseConnector {
 							const key = keysToQuery[i];
 							
 							const keyResult = await this.queryObjectModel(key, "d99vno");
-							if (key === "move" && keyResult.axes.length >= 9) {
+							if (key === "move" && keyResult.axes.length >= (this.partialModel.limits.reportedAxes ?? 9)) {
 								keyResult.axes = await this.queryObjectModel("move.axes", "d99vno", true);
 							}
 
@@ -573,7 +573,7 @@ export class PollConnector extends BaseConnector {
 					for (let key of keysToQuery) {
 						if (this.lastSeqs[key] !== seqs[key]) {
 							const keyResult = await this.queryObjectModel(key, "d99vno");
-							if (key === "move" && keyResult.axes.length >= 9) {
+							if (key === "move" && keyResult.axes.length >= (this.partialModel.limits.reportedAxes ?? 9)) {
 								keyResult.axes = await this.queryObjectModel("move.axes", "d99vno", true);
 							}
 
