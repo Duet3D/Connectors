@@ -10,7 +10,7 @@ import {
 	DirectoryNotFoundError, FileNotFoundError,
 	LoginError, InvalidPasswordError
 } from "./errors";
-import { isAbortSignal, strToTime } from "./utils";
+import { isAbortSignal, strToTime, timeToStr } from "./utils";
 
 /**
  * Class for communication with DSF
@@ -436,7 +436,7 @@ export class RestConnector extends BaseConnector {
 	async upload(filename: string, content: string | Blob | File, cancellationToken?: CancellationToken | AbortSignal, onProgress?: OnProgressCallback): Promise<void> {
 		const payload = (content instanceof(Blob)) ? content : new Blob([content]);
 		if (!this.settings.ignoreFileTimestamps && content instanceof File) {
-			await this.request("PUT", "machine/file/" + encodeURIComponent(filename), { lastModified: content.lastModified }, "", payload, 0, filename, cancellationToken, onProgress);
+			await this.request("PUT", "machine/file/" + encodeURIComponent(filename), { timeModified: timeToStr(new Date(content.lastModified)) }, "", payload, 0, filename, cancellationToken, onProgress);
 		} else {
 			await this.request("PUT", "machine/file/" + encodeURIComponent(filename), null, "", payload, 0, filename, cancellationToken, onProgress);
 		}
