@@ -52,13 +52,16 @@ export function isPrinting(status: MachineStatus) {
  * @returns ISO-like datetime string without timezone
  */
 export function timeToStr(time: Date) {
+	function pad(n: number) {
+		return n < 10 ? '0' + n : n;
+	}
 	let result = "";
 	result += time.getFullYear() + "-";
-	result += (time.getMonth() + 1) + "-";
-	result += time.getDate() + "T";
-	result += time.getHours() + ":";
-	result += time.getMinutes() + ":";
-	result += time.getSeconds();
+	result += pad(time.getMonth() + 1) + "-";
+	result += pad(time.getDate()) + "T";
+	result += pad(time.getHours()) + ":";
+	result += pad(time.getMinutes()) + ":";
+	result += pad(time.getSeconds());
 	return result;
 }
 
