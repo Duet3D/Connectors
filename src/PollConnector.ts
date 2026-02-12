@@ -685,6 +685,11 @@ export class PollConnector extends BaseConnector {
 	private lastFilamentUsage: Array<number> = [];
 
 	/**
+	 * Last total filament usage (in mm)
+	 */
+	private lastTotalFilamentUsage = 0;
+
+	/**
 	 * Last file position (in bytes)
 	 */
 	private lastFilePosition = 0;
@@ -705,6 +710,7 @@ export class PollConnector extends BaseConnector {
 				this.lastLayer = -1;
 				this.lastDuration = this.lastFilePosition = this.lastHeight = 0;
 				this.lastFilamentUsage = [];
+				this.lastTotalFilamentUsage = 0;
 			}
 			return false;
 		}
@@ -736,6 +742,7 @@ export class PollConnector extends BaseConnector {
 					avgFilamentUsage.push((extruder.rawPosition - lastFilamentUsage) / numChangedLayers);
 				}
 			});
+			const avgTotalFilamentUsage = (this.partialModel.job.rawExtrusion !== null) ? (this.partialModel.job.rawExtrusion - this.lastTotalFilamentUsage) / numChangedLayers : 0;
 
 			// Get layer height
 			const currentHeight = this.partialModel.move.axes.find(axis => axis.letter === AxisLetter.Z)?.userPosition ?? 0;
@@ -749,6 +756,7 @@ export class PollConnector extends BaseConnector {
 					avgFilamentUsage.forEach(function (filamentUsage) {
 						newLayer.filament.push(filamentUsage);
 					});
+					newLayer.filamentUsage = avgTotalFilamentUsage;
 					newLayer.fractionPrinted = avgFractionPrinted;
 					newLayer.height = avgLayerHeight;
 					for (const sensor of this.partialModel.sensors.analog) {
@@ -788,6 +796,7 @@ export class PollConnector extends BaseConnector {
 			// Record values for the next layer change
 			this.lastDuration = printDuration;
 			this.lastFilamentUsage = totalFilamentUsage;
+			this.lastTotalFilamentUsage = this.partialModel.job.rawExtrusion ?? 0;
 			this.lastFilePosition = (this.partialModel.job.filePosition != null) ? this.partialModel.job.filePosition as number : 0;
 			this.lastHeight = currentHeight;
 			this.lastLayer = this.partialModel.job.layer;
