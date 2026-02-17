@@ -19,7 +19,7 @@
   },
   "homepage": "https://github.com/Duet3D/Connectors#readme",
   "dependencies": {
-    "@duet3d/objectmodel": "~3.6.0",
+    "@duet3d/objectmodel": "~3.7.0-alpha.2",
     "@foxglove/crc": "^1.0.1",
     "jszip": "^3.10.1"
   },
