@@ -1,4 +1,4 @@
-import ObjectModel, { AxisLetter, GCodeFileInfo, Job, Layer, MachineStatus, Message, Plugin, PluginManifest, initObject } from "@duet3d/objectmodel";
+import ObjectModel, { AxisLetter, GCodeFileInfo, Layer, MachineStatus, Message, Plugin, PluginManifest, initObject } from "@duet3d/objectmodel";
 import JSZip from "jszip";
 import { crc32 } from "@foxglove/crc";
 
@@ -83,7 +83,7 @@ export class PollConnector extends BaseConnector {
 	/**
 	 * Maximum time between HTTP requests before the session times out (in ms)
 	 */
-	sessionTimeout = 8000;
+	private sessionTimeout = 8000;
 
 	/**
 	 * Indicates if the connection maintained by this particular instance is live
@@ -466,7 +466,7 @@ export class PollConnector extends BaseConnector {
 	 * @param requestArray Whether the key is an array
 	 * @returns Object model result
 	 */
-	async queryObjectModel(key: string, flags?: string, requestArray: boolean = false): Promise<any> {
+	private async queryObjectModel(key: string, flags?: string, requestArray: boolean = false): Promise<any> {
 		let keyResult = null, next = 0;
 		do {
 			const keyResponse = await this.request("GET", "rr_model", {
@@ -857,7 +857,7 @@ export class PollConnector extends BaseConnector {
 	/**
 	 * Query the latest G-code reply
 	 */
-	async getGCodeReply() {
+	private async getGCodeReply() {
 		const response = await this.request("GET", "rr_reply", null, "text");
 		const reply = response.trim();
 		if (this.pendingCodes.length > 0) {
@@ -1034,7 +1034,7 @@ export class PollConnector extends BaseConnector {
 	 * Query all the thumbnails from a given fileinfo instance
 	 * @param fileinfo Fileinfo instance to query thumbnails from
 	 */
-	async getThumbnails(fileinfo: GCodeFileInfo) {
+	private async getThumbnails(fileinfo: GCodeFileInfo) {
 		for (let thumbnail of fileinfo.thumbnails.filter(thumbnail => thumbnail.offset > 0)) {
 			try {
 				let offset = thumbnail.offset, thumbnailData = "";

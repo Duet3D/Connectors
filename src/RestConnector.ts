@@ -234,7 +234,7 @@ export class RestConnector extends BaseConnector {
 	/**
 	 * Start the web socket connection
 	 */
-	startSocket() {
+	private startSocket() {
 		// Send PING in predefined intervals to detect disconnects from the client side
 		this.pingTask = setTimeout(this.doPing.bind(this), this.settings.pingInterval);
 
@@ -250,18 +250,35 @@ export class RestConnector extends BaseConnector {
 	/**
 	 * Task used to send ping requests over the socket in regular intervals
 	 */
-	pingTask: NodeJS.Timeout | undefined;
+	private pingTask: NodeJS.Timeout | undefined;
+
+	/**
+	 * Task used to detect a missing PONG reply from the server.
+	 * If it fires before any message is received, the connection is considered lost.
+	 */
+	private pongTask: NodeJS.Timeout | undefined;
 
 	/**
 	* Send a ping request via the socket
 	 */
-	doPing() {
+	private doPing() {
 		// Although the WebSocket standard is supposed to provide PING frames,
 		// there is no way to send them since a WebSocket instance does not provide a method for that.
 		// Hence, we rely on our own optional PING-PONG implementation
 		if (this.socket !== null) {
 			this.socket.send("PING\n");
-			this.pingTask = setTimeout(this.doPing.bind(this), this.settings.pingInterval);
+			// Start a timeout for the expected PONG reply. If no message arrives within
+			// pingInterval ms, assume the connection is dead and report a TimeoutError
+			this.pongTask = setTimeout(() => {
+				this.pongTask = undefined;
+				if (this.socket !== null) {
+					this.socket.close();
+					this.socket = null;
+					this.cancelRequests();
+					this.callbacks?.onConnectionError(this, new TimeoutError());
+				}
+			}, this.settings.pingInterval);
+			// Do not re-schedule pingTask here; it will be re-scheduled once a reply is received
 		}
 	}
 
@@ -269,14 +286,17 @@ export class RestConnector extends BaseConnector {
 	 * Handler for incoming messages
 	 * @param e Event data
 	 */
-	async onMessage(e: MessageEvent<any>) {
+	private async onMessage(e: MessageEvent<any>) {
 		// Don't do anything if the connection has been terminated...
 		if (this.socket == null) {
 			return;
 		}
-		// Use PING/PONG messages to detect connection interrupts
+		// We've just received something — clear any outstanding PONG timeout and reset the ping task
+		if (this.pongTask) {
+			clearTimeout(this.pongTask);
+			this.pongTask = undefined;
+		}
 		if (this.pingTask) {
-			// We've just received something, reset the ping task
 			clearTimeout(this.pingTask);
 		}
 		this.pingTask = setTimeout(this.doPing.bind(this), this.settings.pingInterval);
@@ -302,7 +322,11 @@ export class RestConnector extends BaseConnector {
 	 * Called when the WebSocket connection is closed
 	 * @param e Event data
 	 */
-	onError(e: Event) {
+	private onError(e: Event) {
+		if (this.pongTask) {
+			clearTimeout(this.pongTask);
+			this.pongTask = undefined;
+		}
 		if (this.pingTask) {
 			clearTimeout(this.pingTask);
 			this.pingTask = undefined;
@@ -320,7 +344,11 @@ export class RestConnector extends BaseConnector {
 	 * Called when the WebSocket connection is closed
 	 * @param e Event data
 	 */
-	onClose(e: CloseEvent) {
+	private onClose(e: CloseEvent) {
+		if (this.pongTask) {
+			clearTimeout(this.pongTask);
+			this.pongTask = undefined;
+		}
 		if (this.pingTask) {
 			clearTimeout(this.pingTask);
 			this.pingTask = undefined;
@@ -392,6 +420,10 @@ export class RestConnector extends BaseConnector {
 	 */
 	async disconnect() {
 		if (this.socket) {
+			if (this.pongTask) {
+				clearTimeout(this.pongTask);
+				this.pongTask = undefined;
+			}
 			if (this.pingTask) {
 				clearTimeout(this.pingTask);
 				this.pingTask = undefined;
