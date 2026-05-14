@@ -1,6 +1,6 @@
 {
   "name": "@duet3d/connectors",
-  "version": "3.7.0-alpha.3",
+  "version": "3.7.0-alpha.4",
   "description": "TypeScript implementation of the Duet3D HTTP connectors",
   "type": "module",
   "main": "dist/index.js",
@@ -11,6 +11,12 @@
       "import": "./dist/index.js",
       "require": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./dist/errors": {
+      "types": "./dist/errors.d.ts",
+      "import": "./dist/errors.js",
+      "require": "./dist/errors.js",
+      "default": "./dist/errors.js"
     }
   },
   "scripts": {
