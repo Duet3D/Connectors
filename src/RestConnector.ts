@@ -1,5 +1,5 @@
 import ObjectModel, { GCodeFileInfo, Plugin, PluginManifest, initObject } from "@duet3d/objectmodel";
-import JSZip from "jszip";
+import type JSZip from "jszip";
 
 import BaseConnector from "./BaseConnector";
 import type { CancellationToken, FileListItem, OnProgressCallback } from "./BaseConnector";

@@ -1,5 +1,5 @@
 import ObjectModel, { AxisLetter, GCodeFileInfo, Layer, MachineStatus, Message, Plugin, PluginManifest, initObject } from "@duet3d/objectmodel";
-import JSZip from "jszip";
+import type JSZip from "jszip";
 import { crc32 } from "@foxglove/crc";
 
 import BaseConnector from "./BaseConnector";
