@@ -1,8 +1,8 @@
-import { GCodeFileInfo, Plugin, PluginManifest } from "@duet3d/objectmodel";
-import JSZip from "jszip";
+import type { GCodeFileInfo, Plugin, PluginManifest } from "@duet3d/objectmodel";
+import type JSZip from "jszip";
 
-import Callbacks from "./Callbacks";
-import Settings from "./Settings";
+import type { Callbacks } from "./Callbacks";
+import type { Settings } from "./Settings";
 import { NotImplementedError, NetworkError, TimeoutError, OperationCancelledError, OperationFailedError, FileNotFoundError, InvalidPasswordError } from "./errors";
 
 /**
@@ -145,7 +145,7 @@ export abstract class BaseConnector {
 	 * @throws {TimeoutError} A timeout has occurred
 	 */
 	request(method: string, path: string, params: Record<string, string | number | boolean> | null = null, responseType: XMLHttpRequestResponseType = "json", body: any = null, timeout?: number, filename?: string, cancellationToken?: CancellationToken | AbortSignal, onProgress?: OnProgressCallback, retry = 0): Promise<any> {
-		throw new NotImplementedError("uninstallSystemPackage");
+		throw new NotImplementedError("request");
 	}
 
 	/**

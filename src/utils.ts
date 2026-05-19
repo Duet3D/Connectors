@@ -2,10 +2,10 @@ import { MachineStatus } from "@duet3d/objectmodel";
 
 /**
  * Combine given path elements to a single path
- * @param  {...any} args Path elements
+ * @param args Path elements
  * @returns Combined path
  */
-export function combinePath(...args: any[]) {
+export function combinePath(...args: Array<string>) {
 	let result = '';
 	for (const arg of args) {
 		if (arg.startsWith('/') || /(\d)+:.*/.test(arg)) {
@@ -91,6 +91,6 @@ export function strToTime(str: string) {
  * @param signal Object to check
  * @returns Whether the object is an AbortSignal
  */
-export function isAbortSignal(signal: any): signal is AbortSignal {
-	return signal && typeof signal === "object" && "aborted" in signal;
+export function isAbortSignal(signal: unknown): signal is AbortSignal {
+	return typeof signal === "object" && signal !== null && "aborted" in signal;
 }

@@ -71,14 +71,8 @@ export class OperationCancelledError extends NetworkError {
 export class OperationFailedError extends NetworkError {
     override name: string = "OperationFailedError";
 
-    /**
-     * Reason for the failure
-     */
-	reason: string | null = null;
-
     constructor(reason: string | null = null) {
         super(reason ? `Operation failed: ${reason}` : "Operation failed");
-		this.reason = reason;
 	}
 }
 

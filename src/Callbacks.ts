@@ -1,4 +1,4 @@
-import BaseConnector from "./BaseConnector";
+import type BaseConnector from "./BaseConnector";
 
 /**
  * Class holding possible callbacks for the connector
@@ -17,7 +17,7 @@ export interface Callbacks {
      * @param connector Connector instance
      * @param reason Reason for the connection loss
      */
-    onConnectionError: (connector: BaseConnector, reason: unknown) => void;
+    onConnectionError: (connector: BaseConnector, reason: Error) => void;
 
     /**
      * Connector has established a connection again
@@ -39,4 +39,3 @@ export interface Callbacks {
      */
     onVolumeChanged: (connector: BaseConnector, volumeIndex: number) => void;
 }
-export default Callbacks

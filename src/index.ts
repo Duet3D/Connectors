@@ -1,4 +1,4 @@
-import Settings from "./Settings";
+import type { Settings } from "./Settings";
 
 import PollConnector from "./PollConnector";
 import RestConnector from "./RestConnector";
@@ -29,7 +29,7 @@ export async function connect(hostname: string, settings: Settings) {
 		try {
 			return await connectorType.connect(hostname, settings);
 		} catch (e) {
-			lastError = e as Error;
+			lastError = e instanceof Error ? e : new Error(String(e));
 			if (e instanceof LoginError) {
 				// This connector could establish a connection but the remote end refused the login attempt
 				break;

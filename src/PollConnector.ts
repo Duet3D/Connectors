@@ -2,9 +2,10 @@ import ObjectModel, { AxisLetter, GCodeFileInfo, Layer, MachineStatus, Message, 
 import JSZip from "jszip";
 import { crc32 } from "@foxglove/crc";
 
-import BaseConnector, { CancellationToken, FileListItem, OnProgressCallback } from "./BaseConnector";
-import Settings from "./Settings";
-import Callbacks from "./Callbacks";
+import BaseConnector from "./BaseConnector";
+import type { CancellationToken, FileListItem, OnProgressCallback } from "./BaseConnector";
+import type { Settings } from "./Settings";
+import type { Callbacks } from "./Callbacks";
 
 import {
 	NetworkError, DisconnectedError, TimeoutError, OperationCancelledError, OperationFailedError,
@@ -318,7 +319,7 @@ export class PollConnector extends BaseConnector {
 	/**
 	 * Load enumeration of installed plugins
 	 */
-	async loadPluginList() {
+	override async loadPluginList() {
 		if (this.settings.pluginsFile === null) {
 			return;
 		}
@@ -664,7 +665,7 @@ export class PollConnector extends BaseConnector {
 		} catch (e) {
 			if (!(e instanceof DisconnectedError)) {
 				this.isConnected = false;
-				this.callbacks?.onConnectionError(this, e);
+				this.callbacks?.onConnectionError(this, e instanceof Error ? e : new Error(String(e)));
 			}
 		}
 	}

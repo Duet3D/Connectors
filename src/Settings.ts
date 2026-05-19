@@ -81,9 +81,8 @@ export interface Settings {
 
     //#endregion
 }
-export default Settings
 
-export const DefaultSettings = {
+export const DefaultSettings: Settings = {
     /**
      * Protocol to use for requests. Should be set to location.protocol
      */

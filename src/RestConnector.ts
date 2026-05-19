@@ -1,9 +1,10 @@
 import ObjectModel, { GCodeFileInfo, Plugin, PluginManifest, initObject } from "@duet3d/objectmodel";
 import JSZip from "jszip";
 
-import BaseConnector, { CancellationToken, FileListItem, OnProgressCallback } from "./BaseConnector";
-import Callbacks from "./Callbacks";
-import Settings from "./Settings";
+import BaseConnector from "./BaseConnector";
+import type { CancellationToken, FileListItem, OnProgressCallback } from "./BaseConnector";
+import type { Callbacks } from "./Callbacks";
+import type { Settings } from "./Settings";
 
 import {
 	NetworkError, DisconnectedError, TimeoutError, OperationCancelledError, OperationFailedError,
@@ -291,7 +292,7 @@ export class RestConnector extends BaseConnector {
 		if (this.socket == null) {
 			return;
 		}
-		// We've just received something — clear any outstanding PONG timeout and reset the ping task
+		// We've just received something - clear any outstanding PONG timeout and reset the ping task
 		if (this.pongTask) {
 			clearTimeout(this.pongTask);
 			this.pongTask = undefined;
@@ -319,10 +320,12 @@ export class RestConnector extends BaseConnector {
 	}
 
 	/**
-	 * Called when the WebSocket connection is closed
-	 * @param e Event data
+	 * Called when the WebSocket encounters an error. The browser hands us a bare DOM Event with
+	 * no useful payload, so wrap it in a NetworkError to match onClose and give consumers a real
+	 * Error to render instead of "[object Event]"
+	 * @param _e Event data (unused; WebSocket error events carry no diagnostic info)
 	 */
-	private onError(e: Event) {
+	private onError(_e: Event) {
 		if (this.pongTask) {
 			clearTimeout(this.pongTask);
 			this.pongTask = undefined;
@@ -335,8 +338,8 @@ export class RestConnector extends BaseConnector {
 		if (this.socket) {
 			this.cancelRequests();
 			this.socket = null;
-			
-			this.callbacks?.onConnectionError(this, e);
+
+			this.callbacks?.onConnectionError(this, new NetworkError());
 		}
 	}
 
@@ -591,7 +594,7 @@ export class RestConnector extends BaseConnector {
 	 * @param key Existing key of the plugin data to set
 	 * @param value Custom value to set
 	 */
-	async setSbcPluginData(plugin: string, key: string, value: any): Promise<void> {
+	override async setSbcPluginData(plugin: string, key: string, value: any): Promise<void> {
 		await this.request("PATCH", "machine/plugin", null, "", { plugin, key, value });
 	}
 
@@ -599,7 +602,7 @@ export class RestConnector extends BaseConnector {
 	 * Start a plugin on the SBC
 	 * @param plugin Identifier of the plugin
 	 */
-	async startSbcPlugin(plugin: string): Promise<void> {
+	override async startSbcPlugin(plugin: string): Promise<void> {
 		await this.request("POST", "machine/startPlugin", null, "", plugin);
 	}
 
@@ -607,7 +610,7 @@ export class RestConnector extends BaseConnector {
 	 * Stop a plugin on the SBC
 	 * @param plugin Identifier of the plugin
 	 */
-	async stopSbcPlugin(plugin: string): Promise<void> {
+	override async stopSbcPlugin(plugin: string): Promise<void> {
 		await this.request("POST", "machine/stopPlugin", null, "", plugin);
 	}
 
@@ -619,7 +622,7 @@ export class RestConnector extends BaseConnector {
 	 * @param cancellationToken Optional cancellation token or abort signal that may be triggered to cancel this operation
 	 * @param onProgress Optional callback for progress reports
 	 */
-	async installSystemPackage(filename: string, packageData: Blob, cancellationToken?: CancellationToken | AbortSignal, onProgress?: OnProgressCallback): Promise<void> {
+	override async installSystemPackage(filename: string, packageData: Blob, cancellationToken?: CancellationToken | AbortSignal, onProgress?: OnProgressCallback): Promise<void> {
 		await this.request("PUT", "machine/systemPackage", null, "", packageData, undefined, filename, cancellationToken, onProgress);
 	}
 
@@ -628,7 +631,7 @@ export class RestConnector extends BaseConnector {
 	 * Since this is a potential security hazard, this call is only supported if the DSF is configured to permit system package installations
 	 * @param pkg Name of the package to uninstall
 	 */
-	async uninstallSystemPackage(pkg: string): Promise<void> {
+	override async uninstallSystemPackage(pkg: string): Promise<void> {
 		await this.request("DELETE", "machine/systemPackage", null, "", pkg);
 	}
 }
