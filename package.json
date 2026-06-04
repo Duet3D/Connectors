@@ -1,6 +1,6 @@
 {
   "name": "@duet3d/connectors",
-  "version": "3.7.0-alpha.9",
+  "version": "3.7.0-alpha.10",
   "description": "TypeScript implementation of the Duet3D HTTP connectors",
   "type": "module",
   "main": "dist/index.js",

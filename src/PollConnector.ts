@@ -1093,9 +1093,12 @@ export class PollConnector extends BaseConnector {
 			throw new Error(`Plugin ${pluginManifest.id} cannot be loaded because the current machine does not have an SBC attached`);
 		}
 
-		// Uninstall the previous version if required
-		if (this.partialModel.plugins.has(pluginManifest.id)) {
-			await this.uninstallPlugin(this.partialModel.plugins.get(pluginManifest.id)!, true);
+		// Uninstall the previous version if required. Plugin ids are case-insensitive, so re-installing
+		// under a different-cased id upgrades the existing plugin; uninstall it by its stored id so its
+		// files are removed rather than orphaned
+		const installedPlugin = [...this.partialModel.plugins.values()].find(p => p !== null && p.id.toLowerCase() === pluginManifest.id.toLowerCase());
+		if (installedPlugin) {
+			await this.uninstallPlugin(installedPlugin, true);
 		}
 
 		// Initialize actual plugin instance
