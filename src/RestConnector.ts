@@ -336,8 +336,9 @@ export class RestConnector extends BaseConnector {
 		}
 
 		if (this.socket) {
-			this.cancelRequests();
+			// Null the socket first so aborted requests reject with DisconnectedError, not OperationCancelledError
 			this.socket = null;
+			this.cancelRequests();
 
 			this.callbacks?.onConnectionError(this, new NetworkError());
 		}
@@ -358,8 +359,9 @@ export class RestConnector extends BaseConnector {
 		}
 
 		if (this.socket) {
-			this.cancelRequests();
+			// Null the socket first so aborted requests reject with DisconnectedError, not OperationCancelledError
 			this.socket = null;
+			this.cancelRequests();
 
 			this.callbacks?.onConnectionError(this, new NetworkError(e.reason));
 		}
@@ -449,6 +451,8 @@ export class RestConnector extends BaseConnector {
 	 * @param code Code to execute
 	 * @param noWait Whether the call may return as soon as the code has been enqueued for execution
 	 * @returns Code reply unless noWait is true
+	 * @throws {DisconnectedError} Connection has been lost while the code was being executed (e.g. M997/M999)
+	 * @throws {OperationCancelledError} Operation has been cancelled
 	 */
 	async sendCode<B extends boolean>(code: string, noWait: B): Promise<B extends true ? void : string> {
 		let reply: string;
@@ -456,6 +460,11 @@ export class RestConnector extends BaseConnector {
 			const response = await this.request("POST", "machine/code", noWait ? { async: true } : null, "text", code);
 			reply = response.trim();
 		} catch (e: any) {
+			// Losing the connection is the expected outcome of codes like M997/M999, so let callers
+			// handle it like in standalone mode instead of turning it into a pseudo code reply
+			if (e instanceof DisconnectedError || e instanceof OperationCancelledError) {
+				throw e;
+			}
 			reply = "Error: " + (e ? (e.reason ?? (e.message ?? e.toString())) : "unknown");
 		}
 		return (noWait ? undefined : reply) as B extends true ? void : string;
