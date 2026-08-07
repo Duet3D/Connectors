@@ -243,7 +243,8 @@ export class RestConnector extends BaseConnector {
 			// Null the socket first so onClose does not report the intentional close as a connection error
 			this.socket.close();
 			this.socket = null;
-			this.reconnect().catch(e => this.callbacks?.onConnectionError(this, e instanceof Error ? e : new Error(String(e))));
+			// Only the subscription has to be set up again, the session this client holds stays valid
+			this.openSocket().catch(e => this.callbacks?.onConnectionError(this, e instanceof Error ? e : new Error(String(e))));
 		}
 	}
 
@@ -436,6 +437,13 @@ export class RestConnector extends BaseConnector {
 		}
 
 		// Attempt to reconnect
+		await this.openSocket();
+	}
+
+	/**
+	 * Open the object model subscription socket again using the current session key
+	 */
+	private async openSocket() {
 		await new Promise<void>((resolve, reject) => {
 			const socket = new WebSocket(this.getSocketUrl());
 			socket.onmessage = (e) => {
