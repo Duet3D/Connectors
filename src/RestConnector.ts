@@ -2,7 +2,7 @@ import ObjectModel, { GCodeFileInfo, Plugin, PluginManifest, initObject } from "
 import type JSZip from "jszip";
 
 import BaseConnector from "./BaseConnector";
-import type { CancellationToken, FileListItem, OnProgressCallback } from "./BaseConnector";
+import type { CancellationToken, FileListItem, OnProgressCallback, PendingModelUpdate } from "./BaseConnector";
 import type { Callbacks } from "./Callbacks";
 import type { Settings } from "./Settings";
 
@@ -229,7 +229,21 @@ export class RestConnector extends BaseConnector {
 	 * Cancel all pending HTTP requests
 	 */
 	private cancelRequests() {
+		this.pendingModelUpdates.forEach(modelUpdate => modelUpdate.reject(new DisconnectedError()));
+		this.pendingModelUpdates = [];
 		this.requests.forEach(request => request.abort());
+	}
+
+	/**
+	 * List of pending object model updates to be resolved
+	 */
+	private pendingModelUpdates: Array<PendingModelUpdate> = [];
+
+	/**
+	 * Wait for the next full object model update to be processed
+	 */
+	waitForModelUpdate(): Promise<void> {
+		return new Promise<void>((resolve, reject) => this.pendingModelUpdates.push({ resolve, reject }));
 	}
 
 	/**
@@ -310,6 +324,11 @@ export class RestConnector extends BaseConnector {
 		// Process model updates
 		const data = JSON.parse(e.data);
 		this.callbacks?.onUpdate(this, data);
+
+		// Resolve pending model updates now that this patch has been applied
+		const pendingModelUpdates = this.pendingModelUpdates;
+		this.pendingModelUpdates = [];
+		pendingModelUpdates.forEach(modelUpdate => modelUpdate.resolve());
 
 		// Acknowledge receipt
 		if (this.settings.updateDelay > 0) {

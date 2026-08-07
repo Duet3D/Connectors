@@ -10,6 +10,14 @@ import { NotImplementedError, NetworkError, TimeoutError, OperationCancelledErro
  */
 export const defaultRequestTimeout = 4000;
 
+/**
+ * Pending object model update wrapping an awaitable promise
+ */
+export interface PendingModelUpdate {
+	resolve: () => void,
+	reject: (error: any) => void
+}
+
 
 /**
  * Base class for network connectors that keep the machine data store up-to-date
@@ -170,6 +178,11 @@ export abstract class BaseConnector {
 	 * Disconnect gracefully from the machine
 	 */
 	abstract disconnect(): Promise<void>;
+
+	/**
+	 * Wait for the next full object model update to be processed
+	 */
+	abstract waitForModelUpdate(): Promise<void>;
 
 	/**
 	 * Send a G/M/T-code to the machine

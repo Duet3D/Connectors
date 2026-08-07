@@ -3,7 +3,7 @@ import type JSZip from "jszip";
 import { crc32 } from "@foxglove/crc";
 
 import BaseConnector from "./BaseConnector";
-import type { CancellationToken, FileListItem, OnProgressCallback } from "./BaseConnector";
+import type { CancellationToken, FileListItem, OnProgressCallback, PendingModelUpdate } from "./BaseConnector";
 import type { Settings } from "./Settings";
 import type { Callbacks } from "./Callbacks";
 
@@ -276,6 +276,9 @@ export class PollConnector extends BaseConnector {
 	private cancelRequests() {
 		this.pendingCodes.forEach(code => code.reject(new DisconnectedError()));
 		this.pendingCodes = [];
+		this.pendingModelUpdates.concat(this.modelUpdatesInProgress).forEach(modelUpdate => modelUpdate.reject(new DisconnectedError()));
+		this.pendingModelUpdates = [];
+		this.modelUpdatesInProgress = [];
 		this.requests.forEach(request => request.abort());
 		this.requests = [];
 	}
@@ -414,6 +417,23 @@ export class PollConnector extends BaseConnector {
 	private pendingCodes: Array<PendingCode> = [];
 
 	/**
+	 * List of pending object model updates to be resolved
+	 */
+	private pendingModelUpdates: Array<PendingModelUpdate> = [];
+
+	/**
+	 * List of pending object model updates that the ongoing poll cycle is going to resolve
+	 */
+	private modelUpdatesInProgress: Array<PendingModelUpdate> = [];
+
+	/**
+	 * Wait for the next full object model update to be processed
+	 */
+	waitForModelUpdate(): Promise<void> {
+		return new Promise<void>((resolve, reject) => this.pendingModelUpdates.push({ resolve, reject }));
+	}
+
+	/**
 	 * Last-known job file (used for fetching thumbnails)
 	 */
 	private lastJobFile: string | null = null
@@ -496,6 +516,11 @@ export class PollConnector extends BaseConnector {
 	private async doUpdate() {
 		try {
 			do {
+				// Only waiters registered before this cycle issued its queries may be resolved by it,
+				// else they could be told about model data that predates whatever they are waiting for
+				this.modelUpdatesInProgress = this.pendingModelUpdates;
+				this.pendingModelUpdates = [];
+
 				if (this.justConnected) {
 					this.justConnected = false;
 
@@ -654,6 +679,11 @@ export class PollConnector extends BaseConnector {
 
 				// Save the last status for next time
 				this.lastStatus = this.partialModel.state.status;
+
+				// Resolve pending model updates now that this poll cycle is complete
+				const modelUpdatesToResolve = this.modelUpdatesInProgress;
+				this.modelUpdatesInProgress = [];
+				modelUpdatesToResolve.forEach(modelUpdate => modelUpdate.resolve());
 
 				// Wait for the next model update
 				await new Promise((resolve, reject) => {
