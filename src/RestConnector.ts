@@ -240,11 +240,23 @@ export class RestConnector extends BaseConnector {
 	 */
 	protected override onVerboseQueriesChanged() {
 		if (this.socket !== null) {
-			// Null the socket first so onClose does not report the intentional close as a connection error
-			this.socket.close();
-			this.socket = null;
+			this.closeSocket();
 			// Only the subscription has to be set up again, the session this client holds stays valid
 			this.openSocket().catch(e => this.callbacks?.onConnectionError(this, e instanceof Error ? e : new Error(String(e))));
+		}
+	}
+
+	/**
+	 * Close the current socket on purpose. Its event handlers are unbound first because the close event
+	 * arrives asynchronously - by then the replacement socket is already in place, and the outgoing
+	 * socket's onClose would tear that one down and report it as a connection error
+	 */
+	private closeSocket() {
+		const socket = this.socket;
+		this.socket = null;
+		if (socket !== null) {
+			socket.onmessage = socket.onerror = socket.onclose = null;
+			socket.close();
 		}
 	}
 
@@ -279,6 +291,17 @@ export class RestConnector extends BaseConnector {
 	 * Start the web socket connection
 	 */
 	private startSocket() {
+		// Drop the tasks of the previous socket first. Only one ping task handle is kept, so leaving a
+		// stale one running orphans it: it can never be cleared again, its PONG timeout eventually fires
+		// and tears down the healthy socket, which then reconnects and adds yet another task
+		if (this.pongTask) {
+			clearTimeout(this.pongTask);
+			this.pongTask = undefined;
+		}
+		if (this.pingTask) {
+			clearTimeout(this.pingTask);
+		}
+
 		// Send PING in predefined intervals to detect disconnects from the client side
 		this.pingTask = setTimeout(this.doPing.bind(this), this.settings.pingInterval);
 
