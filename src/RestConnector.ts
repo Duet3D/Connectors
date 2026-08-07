@@ -247,13 +247,47 @@ export class RestConnector extends BaseConnector {
 	}
 
 	/**
+	 * Whether the subscription socket is being reopened. this.socket stays null until the new socket
+	 * has delivered its first model, so this tells that window apart from being disconnected
+	 */
+	private restartingSubscription = false;
+
+	/**
+	 * Whether the queried fields changed again while the socket was being reopened
+	 */
+	private subscriptionRestartRequested = false;
+
+	/**
 	 * Open the subscription socket again so DSF applies the fields this connection asks for
 	 */
-	private restartSubscription() {
-		if (this.socket !== null) {
-			this.closeSocket();
-			// Only the subscription has to be set up again, the session this client holds stays valid
-			this.openSocket().catch(e => this.callbacks?.onConnectionError(this, e instanceof Error ? e : new Error(String(e))));
+	private async restartSubscription() {
+		if (this.restartingSubscription) {
+			// The socket in flight was opened for the previous fields, so reopen it once it is up
+			this.subscriptionRestartRequested = true;
+			return;
+		}
+		if (this.socket === null) {
+			return;
+		}
+
+		this.restartingSubscription = true;
+		try {
+			do {
+				// Verbose and obsolete are usually changed one after another, so let the other one
+				// arrive before reopening rather than reconnecting twice for a single change of mind
+				await Promise.resolve();
+				this.subscriptionRestartRequested = false;
+
+				this.closeSocket();
+				// Only the subscription has to be set up again, the session this client holds stays valid
+				await this.openSocket();
+			}
+			while (this.subscriptionRestartRequested);
+		} catch (e) {
+			this.callbacks?.onConnectionError(this, e instanceof Error ? e : new Error(String(e)));
+		} finally {
+			this.restartingSubscription = false;
+			this.subscriptionRestartRequested = false;
 		}
 	}
 
