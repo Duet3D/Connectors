@@ -496,6 +496,12 @@ export class PollConnector extends BaseConnector {
 		}
 	}
 
+	protected override onObsoleteQueriesChanged() {
+		if (this.obsoleteQueries) {
+			this.refreshAllKeys = true;
+		}
+	}
+
 	/**
 	 * List of pending object model updates to be resolved
 	 */
@@ -687,7 +693,7 @@ export class PollConnector extends BaseConnector {
 					}
 							
 					// Check if any of the non-live fields have changed and query them if so
-					const keyFlags = this.verboseQueries ? "d99vo" : "d99o", refreshAllKeys = this.refreshAllKeys;
+					const keyFlags = `d99${this.verboseQueries ? "v" : ""}${this.obsoleteQueries ? "o" : ""}`, refreshAllKeys = this.refreshAllKeys;
 					this.refreshAllKeys = false;
 					for (let key of keysToQuery) {
 						if (refreshAllKeys || this.lastSeqs[key] !== seqs[key]) {

@@ -203,6 +203,28 @@ export abstract class BaseConnector {
 	protected onVerboseQueriesChanged(): void { }
 
 	/**
+	 * Backing field of {@link obsoleteQueries}
+	 */
+	private _obsoleteQueries = false;
+
+	/**
+	 * Whether object model queries ask for fields flagged as obsolete. Handled like {@link verboseQueries}:
+	 * queried once when the connection is established and then only while a consumer asks for them
+	 */
+	get obsoleteQueries(): boolean { return this._obsoleteQueries; }
+	set obsoleteQueries(value: boolean) {
+		if (this._obsoleteQueries !== value) {
+			this._obsoleteQueries = value;
+			this.onObsoleteQueriesChanged();
+		}
+	}
+
+	/**
+	 * Called when {@link obsoleteQueries} has been changed
+	 */
+	protected onObsoleteQueriesChanged(): void { }
+
+	/**
 	 * Wait for the next full object model update to be processed
 	 */
 	abstract waitForModelUpdate(): Promise<void>;

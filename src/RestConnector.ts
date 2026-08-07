@@ -239,6 +239,17 @@ export class RestConnector extends BaseConnector {
 	 * the socket again. That also delivers a fresh full model, which is the refresh this needs anyway
 	 */
 	protected override onVerboseQueriesChanged() {
+		this.restartSubscription();
+	}
+
+	protected override onObsoleteQueriesChanged() {
+		this.restartSubscription();
+	}
+
+	/**
+	 * Open the subscription socket again so DSF applies the fields this connection asks for
+	 */
+	private restartSubscription() {
 		if (this.socket !== null) {
 			this.closeSocket();
 			// Only the subscription has to be set up again, the session this client holds stays valid
@@ -271,6 +282,9 @@ export class RestConnector extends BaseConnector {
 		}
 		if (this.verboseQueries) {
 			params.push("verbose=true");
+		}
+		if (this.obsoleteQueries) {
+			params.push("obsolete=true");
 		}
 		return `${socketProtocol}//${this.hostname}${this.settings.baseURL}machine${(params.length > 0) ? `?${params.join("&")}` : ""}`;
 	}
