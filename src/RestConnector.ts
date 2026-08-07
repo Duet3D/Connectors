@@ -235,6 +235,34 @@ export class RestConnector extends BaseConnector {
 	}
 
 	/**
+	 * DSF decides per subscriber connection which fields it sends, so switching verbosity means opening
+	 * the socket again. That also delivers a fresh full model, which is the refresh this needs anyway
+	 */
+	protected override onVerboseQueriesChanged() {
+		if (this.socket !== null) {
+			// Null the socket first so onClose does not report the intentional close as a connection error
+			this.socket.close();
+			this.socket = null;
+			this.reconnect().catch(e => this.callbacks?.onConnectionError(this, e instanceof Error ? e : new Error(String(e))));
+		}
+	}
+
+	/**
+	 * Get the URL of the object model subscription socket
+	 */
+	private getSocketUrl(): string {
+		const socketProtocol = (this.settings.protocol === "https:") ? "wss:" : "ws:";
+		const params: Array<string> = [];
+		if (this.sessionKey) {
+			params.push(`sessionKey=${this.sessionKey}`);
+		}
+		if (this.verboseQueries) {
+			params.push("verbose=true");
+		}
+		return `${socketProtocol}//${this.hostname}${this.settings.baseURL}machine${(params.length > 0) ? `?${params.join("&")}` : ""}`;
+	}
+
+	/**
 	 * List of pending object model updates to be resolved
 	 */
 	private pendingModelUpdates: Array<PendingModelUpdate> = [];
@@ -409,8 +437,7 @@ export class RestConnector extends BaseConnector {
 
 		// Attempt to reconnect
 		await new Promise<void>((resolve, reject) => {
-			const socketProtocol = (this.settings.protocol === "https:") ? "wss:" : "ws:";
-			const socket = new WebSocket(`${socketProtocol}//${this.hostname}${this.settings.baseURL}machine${(this.sessionKey ? `?sessionKey=${this.sessionKey}` : "")}`);
+			const socket = new WebSocket(this.getSocketUrl());
 			socket.onmessage = (e) => {
 				// Successfully connected, the first message is the full object model
 				const fullModel = JSON.parse(e.data);

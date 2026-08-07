@@ -180,6 +180,29 @@ export abstract class BaseConnector {
 	abstract disconnect(): Promise<void>;
 
 	/**
+	 * Backing field of {@link verboseQueries}
+	 */
+	private _verboseQueries = false;
+
+	/**
+	 * Whether object model queries ask for fields flagged as verbose. Those are queried once when the
+	 * connection is established and then left alone, so a consumer that displays them - the object model
+	 * browser - has to set this while it is visible. Enabling it refreshes the model to fetch them again
+	 */
+	get verboseQueries(): boolean { return this._verboseQueries; }
+	set verboseQueries(value: boolean) {
+		if (this._verboseQueries !== value) {
+			this._verboseQueries = value;
+			this.onVerboseQueriesChanged();
+		}
+	}
+
+	/**
+	 * Called when {@link verboseQueries} has been changed
+	 */
+	protected onVerboseQueriesChanged(): void { }
+
+	/**
 	 * Wait for the next full object model update to be processed
 	 */
 	abstract waitForModelUpdate(): Promise<void>;

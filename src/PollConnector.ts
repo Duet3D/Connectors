@@ -37,6 +37,68 @@ interface ConnectResponse {
 }
 
 /**
+ * Structure of the live object model values as reported by the firmware. Leaves are `true`, arrays hold a
+ * single template element describing what their items look like
+ */
+type LiveShape = Record<string, any>;
+
+/**
+ * Merge the structure of a live query response into the given shape.
+ * Called once with a response that includes nulls to learn which paths are live at all, and on every
+ * subsequent response so that items which did not exist yet at connect time are picked up as well
+ * @param target Shape to merge into
+ * @param source Live query response
+ */
+function mergeLiveShape(target: LiveShape, source: any): LiveShape {
+	for (const [key, value] of Object.entries(source)) {
+		if (value instanceof Array) {
+			const template: LiveShape = (target[key] instanceof Array) ? target[key][0] : {};
+			for (const item of value) {
+				if (item !== null && item instanceof Object && !(item instanceof Array)) {
+					mergeLiveShape(template, item);
+				}
+			}
+			target[key] = [template];
+		} else if (value !== null && value instanceof Object) {
+			target[key] = mergeLiveShape((target[key] instanceof Object && !(target[key] instanceof Array)) ? target[key] : {}, value);
+		} else if (!(target[key] instanceof Object)) {
+			// A path seen as null stays a leaf, but one already known to hold a sub-object keeps its template
+			target[key] = true;
+		}
+	}
+	return target;
+}
+
+/**
+ * Put back the null values that the firmware left out of a live query response.
+ * A live response always reports every live value, so a path that is known to be live and missing from it
+ * is null. Collections are exempt because the object model never makes them nullable - an array missing
+ * from the response says nothing about its items
+ * @param shape Learned structure of the live values
+ * @param payload Live query response to patch in place
+ */
+function applyLiveNulls(shape: LiveShape, payload: any): void {
+	for (const [key, expected] of Object.entries(shape)) {
+		if (key in payload) {
+			const value = payload[key];
+			if (expected instanceof Array) {
+				if (value instanceof Array) {
+					for (const item of value) {
+						if (item !== null && item instanceof Object && !(item instanceof Array)) {
+							applyLiveNulls(expected[0], item);
+						}
+					}
+				}
+			} else if (expected instanceof Object && value !== null && value instanceof Object && !(value instanceof Array)) {
+				applyLiveNulls(expected, value);
+			}
+		} else if (!(expected instanceof Array)) {
+			payload[key] = null;
+		}
+	}
+}
+
+/**
  * Pending G/M/T-code wrapping an awaitable promise
  */
 interface PendingCode {
@@ -417,6 +479,24 @@ export class PollConnector extends BaseConnector {
 	private pendingCodes: Array<PendingCode> = [];
 
 	/**
+	 * Learned structure of the live object model values, see {@link mergeLiveShape}
+	 */
+	private liveShape: LiveShape | null = null;
+
+	/**
+	 * Set when every object model key must be queried again regardless of its seq number
+	 */
+	private refreshAllKeys = false;
+
+	protected override onVerboseQueriesChanged() {
+		if (this.verboseQueries) {
+			// Seq numbers do not change just because this client started asking for verbose fields,
+			// so the keys have to be read again to pick them up
+			this.refreshAllKeys = true;
+		}
+	}
+
+	/**
 	 * List of pending object model updates to be resolved
 	 */
 	private pendingModelUpdates: Array<PendingModelUpdate> = [];
@@ -540,9 +620,9 @@ export class PollConnector extends BaseConnector {
 						for (let i = 0; i < keysToQuery.length; i++) {
 							const key = keysToQuery[i];
 							
-							const keyResult = await this.queryObjectModel(key, "d99vno");
+							const keyResult = await this.queryObjectModel(key, "d99vo");
 							if (key === "move" && keyResult.axes.length >= (this.partialModel.limits.reportedAxes ?? 9)) {
-								keyResult.axes = await this.queryObjectModel("move.axes", "d99vno", true);
+								keyResult.axes = await this.queryObjectModel("move.axes", "d99vo", true);
 							}
 
 							// Need this to keep track of the layers
@@ -550,7 +630,7 @@ export class PollConnector extends BaseConnector {
 
 							// Update main object model
 							try {
-								this.callbacks?.onUpdate(this, { [key]: keyResult });
+								this.callbacks?.onUpdate(this, { [key]: keyResult }, true);
 							} catch (e) {
 								console.error(e);
 							}
@@ -566,12 +646,23 @@ export class PollConnector extends BaseConnector {
 						this.callbacks?.onConnectProgress(this, -1);
 					}
 				} else {
-					// Query live values
-					const response = await this.request("GET", "rr_model", { flags: "d99fn" });
+					// Query live values. The first response after connecting includes nulls so that the
+					// paths which are live at all can be learned, see mergeLiveShape
+					const learnLiveShape = (this.liveShape === null);
+					const response = await this.request("GET", "rr_model", { flags: learnLiveShape ? "d99fn" : "d99f" });
 
 					// Remove seqs key, it is only maintained by the connector
 					const seqs = response.result.seqs;
 					delete response.result.seqs;
+
+					// Restore the omitted nulls before the fields below are added, so that those never
+					// end up in the learned shape and get nulled on a later response
+					if (learnLiveShape) {
+						this.liveShape = mergeLiveShape({}, response.result);
+					} else {
+						mergeLiveShape(this.liveShape!, response.result);
+						applyLiveNulls(this.liveShape!, response.result);
+					}
 
 					// Update fields that are not part of RRF yet
 					if (!isPrinting(this.partialModel.state.status) && this.lastStatus !== null && isPrinting(this.lastStatus)) {
@@ -596,11 +687,13 @@ export class PollConnector extends BaseConnector {
 					}
 							
 					// Check if any of the non-live fields have changed and query them if so
+					const keyFlags = this.verboseQueries ? "d99vo" : "d99o", refreshAllKeys = this.refreshAllKeys;
+					this.refreshAllKeys = false;
 					for (let key of keysToQuery) {
-						if (this.lastSeqs[key] !== seqs[key]) {
-							const keyResult = await this.queryObjectModel(key, "d99vno");
+						if (refreshAllKeys || this.lastSeqs[key] !== seqs[key]) {
+							const keyResult = await this.queryObjectModel(key, keyFlags);
 							if (key === "move" && keyResult.axes.length >= (this.partialModel.limits.reportedAxes ?? 9)) {
-								keyResult.axes = await this.queryObjectModel("move.axes", "d99vno", true);
+								keyResult.axes = await this.queryObjectModel("move.axes", keyFlags, true);
 							}
 
 							// Maintain internal model data
@@ -612,7 +705,7 @@ export class PollConnector extends BaseConnector {
 
 							// Update main object model
 							try {
-								this.callbacks?.onUpdate(this, { [key]: keyResult });
+								this.callbacks?.onUpdate(this, { [key]: keyResult }, true);
 							} catch (e) {
 								console.error(e);
 							}
@@ -632,6 +725,7 @@ export class PollConnector extends BaseConnector {
 					// Check if the firmware has rebooted
 					if (response.result.state.upTime < this.lastUptime) {
 						this.justConnected = true;
+						this.liveShape = null;
 
 						// Resolve pending codes
 						this.pendingCodes.forEach(code => code.reject(new OperationCancelledError()));

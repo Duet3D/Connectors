@@ -27,10 +27,12 @@ export interface Callbacks {
 
     /***
      * Object model update has been received
-     * The received data can be patched into the object model instance via omInstance.update(data)
+     * The received data can be patched into the object model instance via omInstance.update(data, authoritative)
      * Note that this is called before the final connector instance is returned!
+     * authoritative is set when the data is a complete snapshot of the keys it contains rather than a patch,
+     * so that properties missing from it can be reset to null
      */
-    onUpdate: (connector: BaseConnector, data: any) => void;
+    onUpdate: (connector: BaseConnector, data: any, authoritative?: boolean) => void;
 
     /**
      * Files or directories have been changed on the given volume
