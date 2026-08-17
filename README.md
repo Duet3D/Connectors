@@ -45,16 +45,18 @@ connector.setCallbacks({
             console.log("Connection progress: " + progress + "%");
         }
     },
-    onConnectionError: function (connector: BaseConnector, reason: unknown): void {
+    onConnectionError: function (connector: BaseConnector, reason: Error): void {
         console.log("Connection error: " + reason);
         // TODO call connector.reconnect in given intervals
     },
     onReconnected: function (connector: BaseConnector): void {
         console.log("Connection established again");
     },
-    onUpdate: function (connector: BaseConnector, data: any): void {
+    onUpdate: function (connector: BaseConnector, data: any, authoritative?: boolean): void {
         // Note that this is called before the final connector instance is returned!
-        model.update(data);
+        // authoritative is set when the data is a complete snapshot rather than a patch, so that
+        // properties missing from it are reset to null
+        model.update(data, authoritative);
     },
     onVolumeChanged: function (connector: BaseConnector, volumeIndex: number): void {
         // TODO reload file browser lists of the given volume
@@ -63,3 +65,23 @@ connector.setCallbacks({
 
 // do whatever you want to do with the session, see BaseConnector API
 ```
+
+## Verbose and obsolete fields
+
+Object model fields flagged as verbose or obsolete are not kept up to date by default. They are read
+once when the connection is established and then left alone, because querying them on every update
+costs bandwidth for values that nothing displays. A consumer that does display them, such as an
+object model browser, sets the matching property while it is visible:
+
+```
+connector.verboseQueries = true;
+connector.obsoleteQueries = true;
+```
+
+Enabling either one refreshes the object model so the fields are fetched again - sequence numbers do
+not change just because the client changed its mind. Turning them off again refreshes nothing, so the
+values that were read last stay in the model and go stale from then on.
+
+In SBC mode both are properties of the subscription socket rather than of a single request, so
+changing them reopens it. Apart from a fresh full model arriving through `onUpdate` that is
+transparent to the caller.
