@@ -245,10 +245,12 @@ export class PollConnector extends BaseConnector {
 						that.lastSeqs.reply++;	// increase the seq number to resolve potentially blocking codes
 						that.getGCodeReply()
 							.then(function () {
-								// Retry the original request when the code reply has been received
-								that.request(method, path, params, responseType, body, timeout, filename, cancellationToken, onProgress, retry + 1)
-									.then(result => resolve(result))
-									.catch(error => reject(error));
+								// Retrying straight away reprobes the same buffer shortage, e.g. while a PanelDue or DuetScreen response is still draining
+								setTimeout(function () {
+									that.request(method, path, params, responseType, body, timeout, filename, cancellationToken, onProgress, retry + 1)
+										.then(result => resolve(result))
+										.catch(error => reject(error));
+								}, that.settings.retryDelay);
 							})
 							.catch(error => reject(error));
 					} else {

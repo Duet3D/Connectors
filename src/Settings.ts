@@ -136,7 +136,7 @@ export const DefaultSettings: Settings = {
     /**
      * Time to wait before retrying a failed HTTP request (in ms)
      */
-    retryDelay: 2000,
+    retryDelay: 100,
 
     /**
      * Update interval of rr_model requests (in ms)
