@@ -1,6 +1,6 @@
 {
   "name": "@duet3d/connectors",
-  "version": "3.7.0-rc.1",
+  "version": "3.7.0-rc.2",
   "description": "TypeScript implementation of the Duet3D HTTP connectors",
   "type": "module",
   "main": "dist/index.js",
@@ -37,11 +37,11 @@
     "@foxglove/crc": "^1.0.1"
   },
   "peerDependencies": {
-    "@duet3d/objectmodel": "~3.7.0-alpha.8",
+    "@duet3d/objectmodel": "~3.7.0-rc.1",
     "jszip": "^3.10.1"
   },
   "devDependencies": {
-    "@duet3d/objectmodel": "~3.7.0-alpha.8",
+    "@duet3d/objectmodel": "~3.7.0-rc.1",
     "@types/node": "^25.9.0",
     "jszip": "^3.10.1",
     "typescript": "^6.0.3"
